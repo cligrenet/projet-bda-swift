@@ -1,0 +1,70 @@
+      ********************************
+      * MESSAGES ERREUR CONTROLE CP1 *
+      ********************************
+       01  MSGERR-LIST.
+           05  MSGERR    PIC X(50).
+               88 MSGERR01     VALUE
+               'CODE MOUVEMENT NON RENSEIGNER'.
+               88 MSGERR02     VALUE
+               'CODE MOUVEMENT INVALIDE'.
+               88 MSGERR03     VALUE
+               'NUMERO CLIENT NON RENSEIGNER'.
+               88 MSGERR04     VALUE
+               'NUMERO CLIENT NON NUMERIQUE'.
+               88 MSGERR05     VALUE
+               'NUMERO CLIENT INEXISTANT'.
+               88 MSGERR06     VALUE
+               'NUMERO CLIENT DEJA EXISTANT'.
+               88 MSGERR07     VALUE
+               'CODE STATUT NON RENSEIGNER'.
+               88 MSGERR08     VALUE
+               'CODE STATUT INVALIDE'.
+               88 MSGERR09     VALUE
+               'NOM NON RENSEIGNER'.
+               88 MSGERR10     VALUE
+               'PRENOM NON RENSEIGNER'.
+               88 MSGERR09-1   VALUE
+               'NOM INVALIDE'.
+               88 MSGERR10-1  VALUE
+               'PRENOM INVALIDE'.
+               88 MSGERR11     VALUE
+               'DATE D ENTREE NON RENSEIGNER'.
+               88 MSGERR12     VALUE
+               'DATE D ENTREE NE DOIT PAS ETRE RENSEIGNER'.
+               88 MSGERR13     VALUE
+               'NUMERO DE COMPTE NON RENSEIGNER'.
+               88 MSGERR14     VALUE
+               'NUMERO DE COMPTE NON NUMERIQUE'.
+               88 MSGERR15     VALUE
+               'NUMERO DE COMPTE NE DOIT PAS ETRE RESEIGNER'.
+               88 MSGERR16     VALUE
+               'NUMERO DE COMPTE DEJA EXISTANT'.
+               88 MSGERR17     VALUE
+               'NUMERO DE COMPTE INEXISTANT'.
+               88 MSGERR18      VALUE
+               'DATE OUVERTURE INVALIDE'.
+               88 MSGERR18-1    VALUE
+               'DATE ENTREE INVALIDE'.
+               88 MSGERR19     VALUE
+               'SOLDE NON NUMERIQUE'.
+               88 MSGERR20     VALUE
+               'SOLDE NE DOIT PAS ETRE RENSEIGNER'.
+               88 MSGERR21     VALUE
+               'NUMERO CLIENT NE DOIT PAS ETRE RENSEIGNE'.
+               88 MSGERR80     VALUE
+               'ERREUR LECTURE TABLE CT-STATUT'.
+               88 MSGERR81     VALUE
+               'ERREUR LECTURE TABLE CT-CLIENT'.
+               88 MSGERR82     VALUE
+               'ERREUR LECTURE TABLE CT-COMPTE'.
+               88 MSGERR83     VALUE
+               'ERREUR LECTURE TABLE CT-CPTCLI'.
+               88 MSGERR84     VALUE
+               'ERREUR CREATION DANS TABLE CT-CLIENT'.
+               88 MSGERR85     VALUE
+               'ERREUR MODIFICATION DANS TABLE CT-CLIENT'.
+               88 MSGERR86     VALUE
+               'ERREUR CREATION DANS TABLE CT-COMPTE'.
+               88 MSGERR87     VALUE
+               'ERREUR APPEL CTRLDAT'.
+

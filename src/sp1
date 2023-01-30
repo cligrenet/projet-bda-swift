@@ -1,0 +1,490 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. SP1.
+      *****************************************************************
+      *                                                               *
+      *       PROGRAMME PRINCIPAL SWIFT:                              *
+      *       CONTROLE DU FICHIER S?QUENTIEL SFMVT                    *
+      *                                                               *
+      *****************************************************************
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+            DECIMAL-POINT IS COMMA.
+
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+            SELECT SFMVT      ASSIGN TO FSFMVT
+                   ORGANIZATION      IS SEQUENTIAL
+                   ACCESS MODE       IS SEQUENTIAL
+                   FILE STATUS       IS FS-SFMVT.
+
+       DATA DIVISION.
+      ************************************************************
+      *                 DESCRIPTION DU BUFFER                    *
+      ************************************************************
+       FILE SECTION.
+       FD SFMVT
+           RECORDING IS F.
+           COPY PRJSFMVT REPLACING ==:PREF:== BY ==ENRB==.
+
+       WORKING-STORAGE SECTION.
+      ************************************************************
+      *          DESCRIPTION DE L'ENREGISTREMENT SFMVT           *
+      ************************************************************
+
+          COPY PRJSFMVT REPLACING ==:PREF:== BY ==ENRW==.
+
+      ************************************************************
+      *          DESCRIPTION DE LA ZONE COMMUNICATION            *
+      ************************************************************
+
+      * SP1BRU DOIT COMMUNIQUER AVEC : SSP2 / SSP3 / SA1 / CA1
+        COPY ZCOMS.
+
+      * DECLARATION DU FILE STATUS
+       01 FS-SFMVT                  PIC 99       VALUE ZEROES.
+
+      * INDICATEUR
+       01 IND-FIN                   PIC X.
+       01 IND-VERIF                 PIC 99       VALUE ZEROES.
+       01 IND-VERIF-CALL            PIC 99       VALUE ZEROES.
+       01 IND-VERIF-SSP             PIC 99       VALUE ZEROES.
+
+      * VARIABLE DE SOUS PROGRAMME
+       01 SOUS-PROG                PIC X(8) VALUE SPACES.
+
+      * VARIABLE BANQUE CORRESPONDANTE
+       01 WS-SWIFT-BICCOR          PIC X(11) VALUE SPACES.
+
+      * INFOS CLIENT
+       01 WS-SWIFT-NUMCLID         PIC S9(9) VALUE ZEROES.
+       01 WS-SWIFT-NOMCLID         PIC X(20) VALUE SPACES.
+
+      * TAUX DE CHANGE
+       01 WS-TX-CHANGE              PIC S9(9)V9(9) COMP-3 VALUE ZEROES.
+
+      * MONTANT APRES CHANGE
+       01 MTTRAN-CHANGE             PIC S9(9)V9(9) COMP-3 VALUE ZEROES.
+
+      * DATVAL APRES FORMATAGE
+       01 DATVAL-FORMATE            PIC X(10) VALUE SPACES.
+
+      * CURRENT DATE
+       01 CURRENT-DATE-FIELDS.
+          05  WS-CURRENT-DATE.
+             10  WS-CURRENT-YEAR    PIC  9(4).
+             10  WS-CURRENT-MONTH   PIC  9(2).
+             10  WS-CURRENT-DAY     PIC  9(2).
+
+      * CURRENT DATE FORMAT
+       01 WS-DATE-FORMATE.
+          05 WS-ANNEE-FORMAT        PIC 9(4).
+          05                        PIC X       VALUE '-'.
+          05 WS-MOIS-FORMAT         PIC 99.
+          05                        PIC X       VALUE '-'.
+          05 WS-JOUR-FORMAT         PIC 99.
+
+      * MESSAGES D'ERREURS
+        COPY MSGERSW.
+
+       PROCEDURE DIVISION.
+           PERFORM DEBUT
+           PERFORM TRAITEMENT
+           PERFORM FIN
+           .
+
+       DEBUT.
+      * OUVERTURE DU FICHIER SMVT
+           OPEN INPUT  SFMVT
+           IF FS-SFMVT = ZEROES
+             DISPLAY 'FICHIER SEQUENTIEL SFMVT OUVERT'
+           ELSE
+             DISPLAY 'ERREUR OUVERTURE FICHIER SFMVT, FS : '
+                      FS-SFMVT
+             PERFORM FIN
+           END-IF
+           .
+
+       TRAITEMENT.
+           PERFORM READ-SFMVT
+           PERFORM CURRENT-DATE
+           PERFORM UNTIL IND-FIN = '1'
+              DISPLAY '---------------- ' ENRW-NUMENR
+              PERFORM TRT-CONTROLE
+                 IF IND-VERIF = 0
+                    PERFORM CALL-ACCESSEUR
+                       IF IND-VERIF-CALL = 0
+                         PERFORM CALL-SSP2
+                         PERFORM CALL-SSP3
+                         IF IND-VERIF-SSP = 0
+                           PERFORM CALL-CA2
+                         END-IF
+                       END-IF
+                 END-IF
+              MOVE 0 TO IND-VERIF
+              PERFORM READ-SFMVT
+           END-PERFORM
+           .
+
+       READ-SFMVT.
+           READ SFMVT INTO ENRW-REC-SWIFT
+             AT END        MOVE '1' TO IND-FIN
+           END-READ.
+           IF FS-SFMVT NOT = ZERO AND 10
+             DISPLAY 'ERREUR LECTURE FICHIER ASSURES. FS : '
+                     FS-SFMVT
+             PERFORM FIN
+           END-IF
+           .
+
+       TRT-CONTROLE.
+           PERFORM CTRL-COMPTE-DEBITE
+           PERFORM CTRL-DATE
+           PERFORM CTRL-DEVISE
+           PERFORM CTRL-MONTANT-TRSFR
+           PERFORM CTRL-NOM-NUM-CRDT
+           PERFORM CTRL-BANQUE
+           .
+
+       CTRL-COMPTE-DEBITE.
+           IF ENRW-NUMCPTD = SPACES
+              SET CPTD-NULL TO TRUE
+              DISPLAY MSG-ERROR
+              ADD 1 TO IND-VERIF
+           ELSE
+              IF ENRW-NUMCPTD IS NOT NUMERIC
+                SET CPTD-NOT-NUM TO TRUE
+                DISPLAY MSG-ERROR
+                ADD 1 TO IND-VERIF
+               END-IF
+           END-IF
+           .
+
+       CTRL-DATE.
+           IF ENRW-DATVAL = SPACES
+              SET DATE-NULL TO TRUE
+              DISPLAY MSG-ERROR
+              ADD 1 TO IND-VERIF
+           ELSE
+              IF ENRW-DATVAL IS NOT NUMERIC
+                SET DATE-NOT-NUM TO TRUE
+                DISPLAY MSG-ERROR
+                ADD 1 TO IND-VERIF
+               END-IF
+           END-IF
+           .
+
+       CTRL-DEVISE.
+           IF ENRW-CODDEV = SPACES
+              SET DEV-NULL TO TRUE
+              DISPLAY MSG-ERROR
+              ADD 1 TO IND-VERIF
+           END-IF
+           .
+
+       CTRL-MONTANT-TRSFR.
+           IF ENRW-MTTRAN-X = SPACES
+              SET MTN-NULL TO TRUE
+              DISPLAY MSG-ERROR
+              ADD 1 TO IND-VERIF
+           ELSE
+              IF ENRW-MTTRAN IS NOT NUMERIC
+                SET MTN-NOT-NUM TO TRUE
+                DISPLAY MSG-ERROR
+                ADD 1 TO IND-VERIF
+              END-IF
+           END-IF
+           .
+
+       CTRL-NOM-NUM-CRDT.
+           IF ENRW-NOMCLIC = SPACES AND ENRW-NUMCPTC-X = SPACES
+              SET CPTC-CLIC-NULL TO TRUE
+              DISPLAY MSG-ERROR
+              ADD 1 TO IND-VERIF
+           END-IF
+           .
+
+       CTRL-BANQUE.
+           IF ENRW-BICCRD = SPACES
+              SET BK-NULL TO TRUE
+              DISPLAY MSG-ERROR
+              ADD 1 TO IND-VERIF
+           END-IF
+           .
+
+       CALL-ACCESSEUR.
+           MOVE 0 TO IND-VERIF-CALL
+           PERFORM AC-SA1-BIC
+           PERFORM AC-SA1-DEVISE
+           PERFORM AC-SA1-COMPTE
+           PERFORM AC-SA1-BICCOR
+           PERFORM AC-SA1-INFOS-CLIENT
+           PERFORM CTRLDAT
+           .
+
+      * VERIFICATION DE L'EXISTANCE DE LA BANQUE DANS LA TABLE
+       AC-SA1-BIC.
+           MOVE 'SA1'        TO SOUS-PROG
+           MOVE '1'           TO ZCOM-ACTION
+           MOVE ENRW-BICCRD   TO ZCOM-BIC-BIC000
+           CALL SOUS-PROG USING ZCOMS
+
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'BANQUE EXISTANTE'
+           WHEN 1
+               SET BK-NOT-EXIST TO TRUE
+               DISPLAY MSG-ERROR
+               ADD 1           TO IND-VERIF-CALL
+           WHEN 9
+               ADD 1           TO IND-VERIF-CALL
+               DISPLAY 'ERREUR SQL BIC:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+      * VERIFICATION DE L'EXISTANCE DE LA DEVISE DANS LE TABLE
+       AC-SA1-DEVISE.
+           MOVE 'SA1'        TO SOUS-PROG
+           MOVE '2'           TO ZCOM-ACTION
+           MOVE ENRW-CODDEV   TO ZCOM-DEVISE-CODDEV
+           CALL SOUS-PROG USING ZCOMS
+
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'DEVISE EXISTANTE'
+           WHEN 1
+      *        DISPLAY 'CODE DEVISE INEXISTANT'
+               SET DEV-NOT-EXIST TO TRUE
+               DISPLAY MSG-ERROR
+               ADD 1 TO IND-VERIF-CALL
+           WHEN 9
+               ADD 1 TO IND-VERIF-CALL
+               DISPLAY 'ERREUR SQL DEVISE:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+      * VERIFICATION DE L'EXISTANCE DU STATUT ET DU COMPTE A DEBITER
+       AC-SA1-COMPTE.
+           MOVE 'SA1'        TO SOUS-PROG
+           MOVE '3'           TO ZCOM-ACTION
+           MOVE ENRW-NUMCPTD  TO ZCOM-SWIFT-NUMCPTD
+           CALL SOUS-PROG USING ZCOMS
+
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+               MOVE '4'        TO ZCOM-ACTION
+               MOVE ENRW-NUMCPTD TO ZCOM-SWIFT-NUMCPTD
+               CALL SOUS-PROG USING ZCOMS
+
+               EVALUATE ZCOM-CODE-RETOUR
+               WHEN 0
+      *           CONTINUE
+                  DISPLAY 'LE COMPTE EST OUVERT'
+               WHEN 1
+               SET CPTD-STATUT TO TRUE
+               DISPLAY MSG-ERROR
+               WHEN 9
+                  DISPLAY 'ERREUR SQL STATUT:' ZCOM-SQLCODE
+               END-EVALUATE
+           WHEN 1
+               SET CPTD-NOT-EXIST TO TRUE
+               DISPLAY MSG-ERROR
+               ADD 1 TO IND-VERIF-CALL
+           WHEN 9
+               ADD 1 TO IND-VERIF-CALL
+               DISPLAY 'ERREUR SQL COMPTE:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+       AC-SA1-BICCOR.
+      * RECUPERATION DE LA BANQUE CORRESPONDANTE
+           MOVE 'SA1'        TO SOUS-PROG
+           MOVE '5'           TO ZCOM-ACTION
+           MOVE ENRW-CODDEV   TO ZCOM-BIC-CODDEV
+           MOVE 'O'           TO ZCOM-BIC-INDCOR
+           CALL SOUS-PROG USING ZCOMS
+
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'BANQUE CORRESPONDANTE TROUVEE'
+               MOVE ZCOM-BIC-BIC000   TO WS-SWIFT-BICCOR
+           WHEN 1
+               SET BICCOR-NOT-EXIST TO TRUE
+               DISPLAY MSG-ERROR
+               ADD 1 TO IND-VERIF-CALL
+           WHEN 9
+               ADD 1 TO IND-VERIF-CALL
+               DISPLAY 'ERREUR SQL BICCOR:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+       AC-SA1-INFOS-CLIENT.
+      * RECUPERATION DES INFOS CLIENT
+           MOVE 'SA1'        TO SOUS-PROG
+           MOVE '6'           TO ZCOM-ACTION
+           MOVE ENRW-NUMCPTD  TO ZCOM-SWIFT-NUMCPTD
+           CALL SOUS-PROG USING ZCOMS
+
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'INFOS CLIENTS TROUVEES'
+               MOVE ZCOM-SWIFT-NUMCLID TO WS-SWIFT-NUMCLID
+               MOVE ZCOM-SWIFT-NOMCLID TO WS-SWIFT-NOMCLID
+           WHEN 1
+               SET INFOS-NOT-EXIST TO TRUE
+               DISPLAY MSG-ERROR
+               ADD 1 TO IND-VERIF-CALL
+           WHEN 9
+               ADD 1 TO IND-VERIF-CALL
+               DISPLAY 'ERREUR SQL INFOS CLIENT:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+      * CONTROLME ET FORMATGE DE LA DATE
+       CTRLDAT.
+           MOVE 'CTRLDAT'     TO SOUS-PROG
+           MOVE ENRW-DATVAL   TO ZCOM-DATE
+           CALL SOUS-PROG USING ZCOM-LIGNE-DATE
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'LA DATE EST AU BON FORMAT'
+               MOVE ZCOM-DATE-FORMATE TO DATVAL-FORMATE
+           WHEN 9
+               SET DATE-INVALID TO TRUE
+               DISPLAY MSG-ERROR
+               ADD 1 TO IND-VERIF-CALL
+           END-EVALUATE
+           .
+
+      * RECUPERATION DE LA CURRENT DATE
+       CURRENT-DATE.
+           MOVE FUNCTION CURRENT-DATE TO CURRENT-DATE-FIELDS
+           MOVE WS-CURRENT-YEAR       TO WS-ANNEE-FORMAT
+           MOVE WS-CURRENT-MONTH      TO WS-MOIS-FORMAT
+           MOVE WS-CURRENT-DAY        TO WS-JOUR-FORMAT
+           .
+
+       TRT-MTN.
+      * RECUPERATION DU TAUX DE CHANGE
+           MOVE 'SA1'                TO SOUS-PROG
+           MOVE '7'                   TO ZCOM-ACTION
+           MOVE ENRW-CODDEV           TO ZCOM-CHANGE-CODDEV2
+           CALL SOUS-PROG USING ZCOMS
+
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'TAUX DE CHANGE TROUVE'
+               MOVE ZCOM-CHANGE-CHANGE TO WS-TX-CHANGE
+               DISPLAY WS-TX-CHANGE
+      * CALCUL DU MONTANT EN EURO
+              COMPUTE MTTRAN-CHANGE = WS-TX-CHANGE * ENRW-MTTRAN
+           WHEN 1
+               SET INFOS-NOT-EXIST TO TRUE
+               DISPLAY MSG-ERROR
+               ADD 1 TO IND-VERIF-CALL
+           WHEN 9
+               ADD 1 TO IND-VERIF-CALL
+               DISPLAY 'ERREUR SQL TAUX DE CHANGE:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+       CALL-SSP2.
+      * CREATION DU MESSAGE T103
+           MOVE '103'                 TO ZCOM-SWIFT-TYPMSG
+           MOVE DATVAL-FORMATE        TO ZCOM-SWIFT-DATVAL
+           MOVE ENRW-CODDEV           TO ZCOM-SWIFT-CODDEV
+
+      * TRAITEMENT DU CHANGE DU MONTANT
+           IF ENRW-CODDEV = 'EUR'
+               MOVE ENRW-MTTRAN        TO ZCOM-SWIFT-MTTRAN
+           ELSE
+               PERFORM TRT-MTN
+               MOVE MTTRAN-CHANGE      TO ZCOM-SWIFT-MTTRAN
+           END-IF
+
+           MOVE WS-SWIFT-NUMCLID      TO ZCOM-SWIFT-NUMCLID
+           MOVE WS-SWIFT-NOMCLID      TO ZCOM-SWIFT-NOMCLID
+           MOVE ENRW-NUMCPTD          TO ZCOM-SWIFT-NUMCPTD
+           MOVE 'BAPFFRPPXXX'         TO ZCOM-SWIFT-BICDEB
+           MOVE WS-SWIFT-BICCOR       TO ZCOM-SWIFT-BICCOR
+           MOVE ENRW-NOMCLIC          TO ZCOM-SWIFT-NOMCLIC
+           MOVE ZEROES                TO ZCOM-SWIFT-NUMCLIC
+           MOVE ENRW-NUMCPTC          TO ZCOM-SWIFT-NUMCPTC
+           MOVE ENRW-BICCRD           TO ZCOM-SWIFT-BICCRD
+           MOVE DATVAL-FORMATE        TO ZCOM-SWIFT-DATCRE
+           MOVE 'SSP2'                TO SOUS-PROG
+
+           CALL SOUS-PROG USING ZCOMS
+
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'MT103 ENVOYE'
+           WHEN 2
+               SET MT103-ERROR TO TRUE
+               DISPLAY MSG-ERROR
+           WHEN 9
+               DISPLAY 'ERREUR SQL MT103:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+       CALL-SSP3.
+      * CREATION DU MESSAGE T202
+           MOVE 'SSP3'             TO SOUS-PROG
+           MOVE '202'                  TO ZCOM-SWIFT-TYPMSG
+           MOVE DATVAL-FORMATE         TO ZCOM-SWIFT-DATVAL
+           MOVE ENRW-CODDEV            TO ZCOM-SWIFT-CODDEV
+           MOVE ENRW-MTTRAN            TO ZCOM-SWIFT-MTTRAN
+           MOVE 'BAPFFRPPXXX'          TO ZCOM-SWIFT-BICDEB
+           MOVE WS-SWIFT-BICCOR        TO ZCOM-SWIFT-BICCOR
+           MOVE ENRW-BICCRD            TO ZCOM-SWIFT-BICCRD
+           MOVE WS-DATE-FORMATE        TO ZCOM-SWIFT-DATCRE
+           CALL SOUS-PROG USING ZCOMS
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *        CONTINUE
+               DISPLAY 'MT202 ENVOYE'
+           WHEN 2
+               SET MT202-ERROR TO TRUE
+               DISPLAY MSG-ERROR
+           WHEN 9
+               DISPLAY 'ERREUR SQL MT202 :' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+       CALL-CA2.
+      *    DISPLAY '-> MTTRAN-CHANGE SP1: ' MTTRAN-CHANGE
+      *    DISPLAY '-> WS-DATE-FORMATE SP1: ' WS-DATE-FORMATE
+
+           MOVE 'CA2'               TO SOUS-PROG
+           MOVE ENRW-NUMCPTD           TO ZCOM-OPER-NUMCPT
+           MOVE MTTRAN-CHANGE          TO ZCOM-OPER-MTOPER
+           MOVE WS-DATE-FORMATE        TO ZCOM-OPER-DATEOP
+           CALL SOUS-PROG USING ZCOMS
+           EVALUATE ZCOM-CODE-RETOUR
+           WHEN 0
+      *         CONTINUE
+                DISPLAY 'L''OPERATION A ETE ENREGISTRE'
+           WHEN 1
+               SET MSG-OPER-ERR TO TRUE
+               DISPLAY MSG-ERROR
+           WHEN 9
+                  DISPLAY 'ERREUR SQL STATUT:' ZCOM-SQLCODE
+           END-EVALUATE
+           .
+
+       FIN.
+      * FERMEUTURE DU FICHIER SFMVT
+           CLOSE SFMVT
+
+      * FIN DU TRAITEMENT
+           DISPLAY 'FIN SMVT'
+
+           STOP RUN.

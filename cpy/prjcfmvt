@@ -1,0 +1,18 @@
+      *---------------------------------------------*
+      *  DESCRIPTION FICHIER CFMVT  PROJET FINALE   *
+      *---------------------------------------------*
+       01 :PREF:-REC.
+           05 :PREF:-NUMENR     PIC 9(2).
+           05 :PREF:-CODMVT     PIC X.
+           05 :PREF:-NUMCLI     PIC 9(9).
+           05 :PREF:-STATUT     PIC X.
+           05 :PREF:-NOM        PIC X(15).
+           05 :PREF:-PRENOM     PIC X(15).
+           05 :PREF:-VILLE      PIC X(15).
+           05 :PREF:-CDPOST     PIC X(5).
+           05 :PREF:-DATENT     PIC 9(8).
+           05 :PREF:-NUMCPT     PIC 9(9).
+           05 :PREF:-DATOUV     PIC 9(8).
+           05 :PREF:-SOLDE      PIC S9(9)V99.
+           05 :PREF:-SOLDE-CTRL REDEFINES :PREF:-SOLDE PIC X(11).
+           05 FILLER            PIC X(11).

@@ -1,0 +1,203 @@
+       CBL MAP, LIST, SSRANGE
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CA2.
+      ************************************************************
+      *     SOUS-PROG CA2CLI : MISE A JOUR DU SOLDE DE COMPTE    *
+      ************************************************************
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+           EXEC SQL INCLUDE SQLCA     END-EXEC.
+           EXEC SQL INCLUDE COMPTE    END-EXEC.
+           EXEC SQL INCLUDE OPER      END-EXEC.
+           EXEC SQL INCLUDE MSWIFT    END-EXEC.
+
+       01 ZCALL-CODE.
+          05 ZCALL-ACTION         PIC X.
+          05 ZCALL-CODE-RETOUR    PIC 9(2).
+              88 ZCALL-OK           VALUE ZEROES.
+              88 ZCALL-NON-TROUVE   VALUE 1.
+              88 ZCALL-EN-DOUBLE    VALUE 2.
+              88 ZCALL-FIN-TABLE    VALUE 3.
+              88 ZCALL-ERREUR       VALUE 9.
+          05 ZCALL-SQLCODE        PIC +(9)9.
+
+      * INDICATEUR DE NULLITE
+       01 IND-MONTANT        PIC S9(4) COMP VALUE ZEROES.
+
+      * MESSAGES ERREUR, PARAMETRES DSNTIAR
+       01 ERR-MSG.
+          05 ERR-LONG        PIC S9(4) COMP VALUE +720.
+          05 ERR-TXT         PIC X(72) OCCURS 10 TIMES.
+       01 ERR-TXT-LONG       PIC S9(9) COMP VALUE 72.
+       01 I                  PIC 99.
+
+      * COMPTEURS
+       01 NB-LIGNES-MOD      PIC 9(9) VALUE ZEROES.
+
+      * variables temporaires
+       01 WS-NUMOPE-TEMP     PIC S9(9) COMP VALUE ZEROES.
+       01 WS-TEXTE-LIB       PIC X(80) VALUE 'VERSEMENT INTERNATIONAL'.
+
+      * move comp-3 to ces 2 variables => comparer 
+       01 WS-SOLDE-NUMVAL    PIC 9(9)V9(2).
+       01 WS-MTOPER-NUMVAL   PIC 9(9)V9(2).
+
+       LINKAGE SECTION.
+           EXEC SQL INCLUDE ZCOMS     END-EXEC.
+
+       PROCEDURE DIVISION USING ZCOMS.
+           PERFORM DEBUT
+           PERFORM TRT
+           PERFORM FIN
+           .
+
+       DEBUT.
+      * RECUPERER LA ZONE DE COM EN WORKING/CLAUSE COPY QUI CONTIENT
+      * LES HOST VARIABLES
+           INITIALIZE ZCALL-CODE
+           INITIALIZE DCLCT-COMPTE
+           INITIALIZE DCLCT-OPER
+
+           MOVE ZCOM-CODE            TO ZCALL-CODE
+           MOVE ZCOM-LIGNE-COMPTE    TO DCLCT-COMPTE
+           MOVE ZCOM-LIGNE-OPER      TO DCLCT-OPER
+           .
+
+       TRT.
+           PERFORM LEC-SOLDE
+           PERFORM COUNT-NUMOPE
+           PERFORM CRE-OPER
+           .
+
+       LEC-SOLDE.
+           EXEC SQL
+             SELECT SOLDE
+             INTO :WS-SOLDE
+             FROM ADS0103.CT_COMPTE
+             WHERE NUMCPT = :WS-NUMCPT-OP
+           END-EXEC
+
+      *    DISPLAY '-> LEC-SOLDE CA2: ' WS-SOLDE
+      *    DISPLAY '-> WS-MTOPER CA2: ' WS-MTOPER
+      *    DISPLAY '-> WS-NUMCPT-OP CA2: ' WS-NUMCPT-OP
+      *    DISPLAY '-> WS-DATEOP CA2: ' WS-DATEOP
+
+           MOVE SQLCODE TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+      * CONVERT 2 COMP-3 INTO STANDARD NUMERIC VARIABLE, THEN COMPARE
+               MOVE WS-SOLDE TO WS-SOLDE-NUMVAL
+               MOVE WS-MTOPER TO WS-MTOPER-NUMVAL
+               IF WS-SOLDE-NUMVAL  >=  WS-MTOPER-NUMVAL
+      * QUAND SOLDE EST SUFFISANT, MAJ COMPTE SOLDE
+                 PERFORM MOD-SOLDE
+               END-IF
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+               PERFORM FIN-ERR
+           END-EVALUATE
+           .
+
+       MOD-SOLDE.
+      *    DISPLAY 'BEFORE MOVE / WS-DATEOP:' WS-DATEOP
+           MOVE ZCOM-OPER-DATEOP     TO WS-DATEOP
+      *    DISPLAY 'AFTER MOVE / WS-DATEOP:' WS-DATEOP
+
+      * RECUPERER NUM COMPTE ET MONTANT
+           EXEC SQL
+             UPDATE ADS0103.CT_COMPTE
+               SET  SOLDE     = :WS-SOLDE,
+                    DATMAJ    = :WS-DATEOP
+             WHERE NUMCPT     = :WS-NUMCPT-OP
+           END-EXEC
+
+           MOVE SQLCODE  TO ZCOM-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK  TO TRUE
+               MOVE SQLERRD(3)   TO NB-LIGNES-MOD
+               DISPLAY '>> NB LIGNES MODIFIEES POUR COMPTE '
+                       ZCOM-COMPTE-NUMCPT ' : '
+                       NB-LIGNES-MOD
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       COUNT-NUMOPE.
+           EXEC SQL
+             SELECT MAX(NUMCPTD)
+             INTO :WS-NUMOPE-TEMP
+             FROM ADS0103.ST_MSWIFT
+             WHERE NUMCPTD = :WS-NUMCPT-OP
+           END-EXEC
+
+           MOVE SQLCODE  TO ZCOM-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK  TO TRUE
+               COMPUTE WS-NUMOPE-TEMP =  WS-NUMOPE-TEMP + 1
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+               MOVE 1 TO  WS-NUMOPE-TEMP
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       CRE-OPER.
+           MOVE ZCOM-OPER-DATEOP     TO WS-DATEOP
+
+           IF ZCOM-OPER-MTOPER = ZEROES
+             MOVE -1 TO IND-MONTANT
+           END-IF
+
+           EXEC SQL
+             INSERT INTO ADS0103.CT_OPER
+             VALUES(:WS-NUMCPT-OP,
+                    :WS-NUMOPE-TEMP,
+                    :WS-TEXTE-LIB,
+                    :WS-MTOPER :IND-MONTANT,
+                    :WS-DATEOP)
+           END-EXEC
+
+           MOVE SQLCODE  TO ZCOM-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK  TO TRUE
+               MOVE SQLERRD(3)   TO NB-LIGNES-MOD
+               DISPLAY '>> NB LIGNES D''OPERATION CREES : '
+                       NB-LIGNES-MOD
+             WHEN -803
+               SET ZCALL-EN-DOUBLE   TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       FIN-ERR.
+           DISPLAY 'ERREUR DB2 '
+           DISPLAY 'APPEL DSNTIAR '
+           CALL 'DSNTIAR' USING SQLCA, ERR-MSG, ERR-TXT-LONG
+           PERFORM VARYING I FROM 1 BY 1 UNTIL I > 10
+             DISPLAY ERR-TXT(I)
+           END-PERFORM
+           PERFORM FIN
+           .
+
+       FIN.
+      * COPIER LA ZONE DE COM DE LA WORKING DANS LA LINKAGE
+           MOVE ZCALL-CODE TO ZCOM-CODE
+
+           GOBACK.

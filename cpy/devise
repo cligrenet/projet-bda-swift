@@ -1,0 +1,32 @@
+      ******************************************************************
+      * DCLGEN TABLE(ADS0103.ST_DEVISE)                                *
+      *        LIBRARY(ADS01.ADS0103.CPY(DEVISE))                      *
+      *        ACTION(REPLACE)                                         *
+      *        LANGUAGE(COBOL)                                         *
+      *        NAMES(WS-)                                              *
+      *        QUOTE                                                   *
+      *        DBCSDELIM(NO)                                           *
+      *        COLSUFFIX(YES)                                          *
+      *        INDVAR(YES)                                             *
+      * ... IS THE DCLGEN COMMAND THAT MADE THE FOLLOWING STATEMENTS   *
+      ******************************************************************
+           EXEC SQL DECLARE ADS0103.ST_DEVISE TABLE
+           ( CODDEV                         CHAR(3) NOT NULL,
+             LIBDEV                         CHAR(15) NOT NULL
+           ) END-EXEC.
+      ******************************************************************
+      * COBOL DECLARATION FOR TABLE ADS0103.ST_DEVISE                  *
+      ******************************************************************
+       01  DCLST-DEVISE.
+      *                       CODDEV
+           10 WS-CODDEV-DEV        PIC X(3).
+      *                       LIBDEV
+           10 WS-LIBDEV            PIC X(15).
+      ******************************************************************
+      * INDICATOR VARIABLE STRUCTURE                                   *
+      ******************************************************************
+       01  IST-DEVISE.
+           10 INDSTRUC           PIC S9(4) USAGE COMP OCCURS 2 TIMES.
+      ******************************************************************
+      * THE NUMBER OF COLUMNS DESCRIBED BY THIS DECLARATION IS 2       *
+      ******************************************************************

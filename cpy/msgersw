@@ -1,0 +1,38 @@
+
+      **************************************************************
+      *                                                            *
+      *       TABLE MESSAGES D'ERREURS POUR LE PGRM SP1            *
+      *                                                            *
+      **************************************************************
+
+       01 MSG-ERROR       PIC X(100).
+            88 CPTD-NULL      VALUE 'NUMERO DU COMPTE A DEBITER NON RENS
+      -     'EIGNE'.
+            88 CPTD-NOT-NUM   VALUE 'NUMERO DU COMPTE A DEBITER NON NUME
+      -     'RIQUE'.
+            88 CPTD-NOT-EXIST VALUE 'NUMERO DU COMPTE A DEBITER INEXISTA
+      -     'NT'.
+            88 CPTD-STATUT    VALUE 'LE COMPTE N''EST PAS OUVERT'.
+            88 DATE-NULL      VALUE 'DATE DE VALEUR NON RENSEIGNE'.
+            88 DATE-NOT-NUM   VALUE 'DATE DE VALEUR NON NUMERIQUE'.
+            88 DATE-FORMAT    VALUE 'DATE DE VALEUR INVALIDE'.
+            88 DEV-NULL       VALUE 'CODE DE DEVISE NON RENSEIGNEE'.
+            88 DEV-NOT-EXIST  VALUE 'CODE DE DEVISE INEXISTANTE'.
+            88 MTN-NULL       VALUE 'MONTANT A TRANSFERER NON RENSEIGNE
+      -     ''.
+            88 MTN-NOT-NUM    VALUE 'MONTANT A TRANSFERER NON NUMERIQUE
+      -     ''.
+            88 MTN-SUP        VALUE 'MONTANT A TRANSFERER SUPERIEUR AU
+      -     'SOLDE DU COMPTE A DEBITER'.
+            88 CPTC-CLIC-NULL VALUE 'NUMERO DU COMPTE A CREDITER ET NOM
+      -     ' DU CLIENT A CREDITER NON RENSEIGNE'.
+            88 BK-NULL        VALUE 'BANQUE A CREDITER NON RENSEIGENER'.
+            88 BK-NOT-EXIST   VALUE 'BANQUE A CREDITER INEXISTANCE'.
+            88 BICCOR-NOT-EXIST VALUE 'BANQUE DE CORRESPONDANCE INEXISTA
+      -     'NTE'.
+            88 INFOS-NOT-EXIST VALUE 'INFOS DU CLIENT INEXISTANTE'.
+            88 MT103-ERROR     VALUE 'MT103 N''A PAS PU ETRE ENVOYE'.
+            88 MT202-ERROR     VALUE 'MT202 N''A PAS PU ETRE ENVOYE'.
+            88 DATE-INVALID    VALUE 'LA DATE N''EST PAS VALIDE'.
+            88 MSG-OPER-ERR    VALUE 'L''OPERATION N''A PAS PU ETRE ENRE
+      -     'GISTRE'.

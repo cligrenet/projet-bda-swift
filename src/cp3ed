@@ -1,0 +1,179 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CP3.
+      ******************************************************************
+      * EDITION SOLDE                                                  *
+      ******************************************************************
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+            DECIMAL-POINT IS COMMA.
+
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+            SELECT EDITION ASSIGN TO EDITION
+                   FILE STATUS   IS FS-EDITION.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD  EDITION
+           RECORDING MODE IS F.
+       01  CP3-ENR.
+           05 CP3-SAUT  PIC X.
+           05 CP3-LIGNE PIC X(132).
+
+       WORKING-STORAGE SECTION.
+           EXEC SQL INCLUDE SQLCA    END-EXEC.
+           EXEC SQL INCLUDE OPER     END-EXEC.
+
+      ******************************************************************
+       01  DCLCT-OPER.
+           10 WR-NUMCPT            PIC S9(9) USAGE COMP.
+           10 WR-NUMOPE            PIC S9(9) USAGE COMP.
+           10 WR-TEXTE0            PIC X(80).
+           10 WR-MTOPER            PIC S9(9)V9(2) USAGE COMP-3.
+           10 WR-DATOPE            PIC X(10).
+
+      * DECLATION DUN CURSEUR CLIENT-COMPTE
+           EXEC SQL DECLARE CURSOPER CURSOR
+           FOR SELECT
+                     NUMCPT,
+                     NUMOPE,
+                     TEXTE0,
+                     VALUE(MTOPER, 0),
+                     DATEOP
+           FROM ADS0103.CT_OPER
+           ORDER BY NUMCPT, NUMOPE
+           END-EXEC
+
+      * DECLARATION DU FILE STATUS
+       01 FS-EDITION    PIC 99  VALUE ZEROES.
+
+       01 DATE8.
+           05 DATE8-SS PIC 99.
+           05 DATE8-AA PIC 99.
+           05 DATE8-MM PIC 99.
+           05 DATE8-JJ PIC 99.
+
+       01 DATE6.
+           05 DATE6-SS PIC 99.
+           05 DATE6-AA PIC 9999.
+           05 DATE6-MM PIC 99.
+           05 DATE6-JJ PIC 99.
+
+      * LIGNES D EDITION DES INFORMATIONS CLIENT ET COMPTE PR CP3
+       01  LIG1.
+           05                 PIC X(35)   VALUE SPACES.
+           05                 PIC X(36)   VALUE 'EDITION DES OPERATIONS
+      -                      'SUR COMPTES'.
+           05                 PIC X(15)   VALUE SPACES.
+           05                 PIC X(05)   VALUE 'LE:'.
+
+           05 LIG1-DATE-JOUR.
+              10 LIG1-JJ      PIC 99.
+              10              PIC X      VALUE '/'.
+
+              10 LIG1-MM      PIC 99.
+              10              PIC X      VALUE '/'.
+              10 LIG1-AA      PIC 99.
+
+       01  LIG2.
+           05                 PIC X(30)  VALUE SPACES.
+           05                 PIC X(33)  VALUE ALL '-'.
+
+       01  LIG3.
+           05                 PIC X(09)   VALUE 'COMPTE :'.
+           05                 PIC X(05)   VALUE SPACES.
+           05                 PIC X(09)   VALUE 'NUMOPE'.
+           05                 PIC X(06)   VALUE SPACES.
+           05                 PIC X(46)   VALUE 'TEXTE'.
+           05                 PIC X(13)   VALUE 'MONTANT'.
+           05                 PIC X(06)   VALUE SPACES.
+           05                 PIC X(09)   VALUE 'DATE'.
+
+       01  LIG4.
+           05 E-NUMCPT        PIC Z(09)   VALUE ZEROES.
+           05                 PIC X(05)   VALUE SPACES.
+           05 E-NUMOPE        PIC Z(09)   VALUE ZEROES.
+           05                 PIC X(06)   VALUE SPACES.
+           05 E-TEXTE0        PIC X(46)   VALUE SPACES.
+           05 E-MTOPER        PIC Z(9),99 VALUE ZEROES.
+           05                 PIC X(06)   VALUE SPACES.
+           05 E-DATOPE        PIC X(10)   VALUE SPACES.
+
+       PROCEDURE DIVISION.
+           PERFORM DEBUT
+           PERFORM TRAITEMENT UNTIL SQLCODE = +100
+           PERFORM FIN.
+
+       DEBUT.
+           OPEN OUTPUT EDITION
+           IF FS-EDITION NOT = ZEROES
+           DISPLAY 'ERREUR OPEN EDITION: ' FS-EDITION
+           PERFORM FIN
+           END-IF
+
+      * ON ALIMENTE LA DATE DU JOUR
+           MOVE FUNCTION CURRENT-DATE TO DATE8
+           MOVE DATE8-AA TO LIG1-AA
+           MOVE DATE8-MM TO LIG1-MM
+           MOVE DATE8-JJ TO LIG1-JJ
+
+      * ECRITURE 1ERE LIGNE
+           MOVE LIG1     TO CP3-LIGNE
+           MOVE 1        TO CP3-SAUT
+           WRITE CP3-ENR
+
+      * ECRITURE 2EME LIGNE
+           MOVE LIG2     TO CP3-LIGNE
+           MOVE ' '      TO CP3-SAUT
+           WRITE CP3-ENR
+
+      * ECRITURE 3EME LIGNE
+           MOVE LIG3     TO CP3-LIGNE
+           MOVE ' '      TO CP3-SAUT
+           WRITE CP3-ENR
+
+           EXEC SQL OPEN CURSOPER    END-EXEC.
+           IF SQLCODE NOT = ZEROES
+              DISPLAY 'ERREUR OUVERTURE CURSEUR ' SQLCODE
+              PERFORM FIN
+           END-IF
+
+           PERFORM FETCH-CURSEUR
+           .
+
+       TRAITEMENT.
+           IF SQLCODE = ZEROES
+              MOVE WR-NUMCPT TO E-NUMCPT
+              MOVE WR-NUMOPE TO E-NUMOPE
+              MOVE WR-TEXTE0 TO E-TEXTE0
+              MOVE WR-MTOPER TO E-MTOPER
+              MOVE WR-DATOPE TO E-DATOPE
+
+      * ECRITURE LIGNE DETAIL
+              MOVE LIG4     TO CP3-LIGNE
+              MOVE ' '      TO CP3-SAUT
+              WRITE CP3-ENR
+           ELSE
+              IF SQLCODE NOT = +100
+                 DISPLAY 'ERREUR FETCH CURSEUR ' SQLCODE
+                 PERFORM FIN
+              END-IF
+           END-IF
+           PERFORM FETCH-CURSEUR
+            .
+
+       FETCH-CURSEUR.
+           EXEC SQL FETCH CURSOPER
+           INTO  :WR-NUMCPT,
+                 :WR-NUMOPE,
+                 :WR-TEXTE0,
+                 :WR-MTOPER,
+                 :WR-DATOPE
+           END-EXEC
+           .
+
+       FIN.
+           CLOSE EDITION
+           EXEC SQL CLOSE CURSOPER   END-EXEC
+           STOP RUN.

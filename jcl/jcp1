@@ -1,0 +1,76 @@
+//ADS0103C JOB 'PROJET CP1',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),
+//         COND=(4,LT),TIME=(,30),NOTIFY=&SYSUID,RESTART=*
+//*
+//************************************************************
+//*
+//PLIB    JCLLIB ORDER=(DSN910.PROCLIB)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU PROGRAMME COBOL
+//************************************************************
+//STEP1         EXEC IGYWCL,PARM='LIB',MBR=CP1
+//*
+//STEPLIB       DD  DSN=IGY410.SIGYCOMP,DISP=SHR
+//*
+//SYSLIB        DD  DSN=ADS01.ADS0103.CPY,DISP=SHR
+//SYSIN         DD  DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//LKED.SYSLMOD  DD  DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//STEP2         EXEC IGYWCL,PARM='LIB',MBR=CTRLDAT
+//*
+//STEPLIB       DD  DSN=IGY410.SIGYCOMP,DISP=SHR
+//*
+//SYSLIB        DD  DSN=ADS01.ADS0103.CPY,DISP=SHR
+//SYSIN         DD  DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//LKED.SYSLMOD  DD  DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU SOUS-PROGRAMME COBOL
+//************************************************************
+//STEP3        EXEC PROC=DSNHICOB,PARM.PLKED=('MAP','NOER'),
+//             MBR=CA1
+//SYSLIB       DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//PC.SYSIN     DD DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//PC.DBRMLIB   DD DSN=ADS01.ADS0103.DBRM(&MBR),DISP=SHR
+//LKED.SYSLMOD DD DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* BIND DU PROGRAMME
+//************************************************************
+//STEP4     EXEC PGM=IKJEFT01,DYNAMNBR=20,COND=(8,LT)
+//STEPLIB   DD  DSN=DSN910.SDSNEXIT,DISP=SHR
+//          DD  DSN=DSN910.SDSNLOAD,DISP=SHR
+//DBRMLIB   DD  DSN=ADS01.ADS0103.DBRM,DISP=SHR
+//SYSPRINT  DD  SYSOUT=*
+//SYSTSPRT  DD  SYSOUT=*
+//SYSUDUMP  DD  SYSOUT=*
+//SYSTSIN   DD  *
+DSN SYSTEM(DB9G)
+BIND PLAN(CP1)    -
+     MEMBER(CA1)
+END
+/*
+//************************************************************
+//* EXECUTION PROG DB2
+//************************************************************
+//STEP5     EXEC PGM=IKJEFT01,DYNAMNBR=20,COND=(8,LT),
+//          REGION=4M
+//STEPLIB   DD  DSN=DSN910.SDSNEXIT,DISP=SHR
+//          DD  DSN=DSN910.SDSNLOAD,DISP=SHR
+//          DD  DSN=DSN910.RUNLIB.LOAD,DISP=SHR
+//          DD  DSN=&&LOADTEMP,DISP=(MOD,PASS)
+//DBRMLIB   DD  DSN=ADS01.ADS0103.DBRM,DISP=SHR
+//SYSPRINT  DD  SYSOUT=*
+//SYSTSPRT  DD  SYSOUT=*
+//SYSUDUMP  DD  SYSOUT=*
+//SYSTSIN   DD  *
+DSN SYSTEM(DB9G)
+  RUN PROGRAM(CP1) -
+      PLAN(CP1)
+END
+/*
+//INP001    DD DSN=ADS01.ADS0103.CFMVT,DISP=SHR
+//OUT001    DD SYSOUT=*
+//SYSOUT    DD SYSOUT=*
+//

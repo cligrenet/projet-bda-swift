@@ -1,0 +1,156 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. SSP2.
+      ****************************************************************
+      *     SOUS-PROG SSP2: CREATION DU MT103 DANS LA TABLE ST_SWIFT *
+      ****************************************************************
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+           EXEC SQL INCLUDE SQLCA     END-EXEC.
+           EXEC SQL INCLUDE MSWIFT    END-EXEC.
+
+       01 ZCALL-CODE.
+           05 ZCALL-ACTION             PIC X.
+           05 ZCALL-CODE-RETOUR        PIC 99.
+              88 ZCALL-OK                       VALUE ZEROES.
+              88 ZCALL-NON-TROUVE               VALUE 1.
+              88 ZCALL-EN-DOUBLE                VALUE 2.
+              88 ZCALL-FIN-TABLE                VALUE 3.
+              88 ZCALL-ERREUR                   VALUE 9.
+           05 ZCALL-SQLCODE            PIC +(9)9.
+
+      * INDICATEUR DE NULLITE
+       01 IND-NUMCLIC        PIC S9(4) COMP VALUE ZEROES.
+
+      * COMPTEUR LIGNES CREES
+       01 NB-LIGNES-CRE     PIC 9(9) VALUE ZEROES.
+
+      * MANIPULATION DE DONNEES AVANT CREATION MT103
+      * AUTO INCREMENTATION REFMSG
+       01 WS-NB-REFMSG      PIC S9(9) COMP VALUE ZEROES.
+       01 WS-MAX-REFMSG     PIC S9(9) COMP VALUE ZEROES.
+
+       LINKAGE SECTION.
+           EXEC SQL INCLUDE ZCOMS     END-EXEC.
+
+       PROCEDURE DIVISION USING ZCOMS.
+           PERFORM DEBUT
+           PERFORM TRT
+           PERFORM FIN
+           .
+
+       DEBUT.
+      * RECUPERER LA ZONE DE COM EN WORKING/CLAUSE COPY QUI CONTIENT
+      * LES HOST VARIABLES
+           INITIALIZE ZCALL-CODE
+           INITIALIZE DCLST-MSWIFT
+
+           MOVE ZCOM-CODE         TO ZCALL-CODE
+           MOVE ZCOM-LIGNE-MSWIFT TO DCLST-MSWIFT
+           .
+
+       TRT.
+           PERFORM CTRL-VIDE
+           PERFORM INCRE-REFMSG
+           PERFORM CRE-MT103
+           .
+
+       CTRL-VIDE.
+           EXEC SQL
+             SELECT COUNT(REFMSG)
+             INTO :WS-NB-REFMSG
+             FROM ADS0103.ST_MSWIFT
+           END-EXEC
+
+      *    DISPLAY '---> WS-NB-REFMSG DANS CTRL-VIDE : 'WS-NB-REFMSG
+
+           MOVE SQLCODE              TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+               IF WS-NB-REFMSG = 0
+      *           DISPLAY 'CTRL MT103, TABLE SWIFT VIDE'
+                  MOVE 1              TO WS-REFMSG
+      *           COMPUTE WS-REFMSG = 1 + WS-NB-REFMSG
+      *           DISPLAY '---> WS-REFMSG APRES L''ADD CTL-VIDE : '
+      *                    WS-REFMSG
+               ELSE
+                 PERFORM INCRE-REFMSG
+               END-IF
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       INCRE-REFMSG.
+           EXEC SQL
+             SELECT MAX(REFMSG)
+             INTO :WS-MAX-REFMSG
+             FROM ADS0103.ST_MSWIFT
+           END-EXEC
+
+           MOVE SQLCODE              TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+      *        COMPUTE WS-REFMSG = WS-MAX-REFMSG + 1
+               ADD 1 TO WS-MAX-REFMSG
+      *        DISPLAY '---> MAX APRES ADDITION' WS-MAX-REFMSG
+               MOVE WS-MAX-REFMSG    TO WS-REFMSG
+      *        DISPLAY '---> WS-REFMSG: ' WS-REFMSG
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       CRE-MT103.
+           IF WS-NUMCLIC = ZEROES
+             MOVE -1 TO IND-NUMCLIC
+           END-IF
+
+           EXEC SQL
+             INSERT INTO ADS0103.ST_MSWIFT
+             VALUES(:WS-REFMSG,
+                    :WS-TYPMSG,
+                    :WS-DATVAL,
+                    :WS-CODDEV,
+                    :WS-MTTRAN,
+                    :WS-NUMCLID,
+                    :WS-NOMCLID,
+                    :WS-NUMCPTD,
+                    :WS-BICDEB,
+                    :WS-BICCOR,
+                    :WS-NUMCLIC :IND-NUMCLIC,
+                    :WS-NOMCLIC,
+                    :WS-NUMCPTC,
+                    :WS-BICCRD,
+                    :WS-DATCRE)
+           END-EXEC
+
+           MOVE SQLCODE TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK    TO TRUE
+               MOVE SQLERRD(3) TO NB-LIGNES-CRE
+               DISPLAY '>>  NB LIGNES CREES POUR MT103 : ' NB-LIGNES-CRE
+             WHEN -803
+               SET ZCALL-EN-DOUBLE TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR    TO TRUE
+           END-EVALUATE
+           .
+
+       FIN.
+      * COPIER LA ZONE DE COM DE LA WORKING DANS LA LINKAGE
+           MOVE ZCALL-CODE    TO ZCOM-CODE
+
+           GOBACK.

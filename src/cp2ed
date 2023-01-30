@@ -1,0 +1,238 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CP2.
+      ******************************************************************
+      *  EDITION COMPTE-CLIENT                                         *
+      ******************************************************************
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+            DECIMAL-POINT IS COMMA.
+
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+            SELECT EDITION ASSIGN TO EDITION
+              FILE STATUS  IS FS-EDITION.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD  EDITION
+           RECORDING MODE IS F.
+       01  CP2-ENR.
+           05 CP2-SAUT  PIC X.
+           05 CP2-LIGNE PIC X(132).
+
+       WORKING-STORAGE SECTION.
+           EXEC SQL INCLUDE SQLCA    END-EXEC.
+           EXEC SQL INCLUDE CLIENT   END-EXEC.
+           EXEC SQL INCLUDE COMPTE   END-EXEC.
+           EXEC SQL INCLUDE CPTCLI   END-EXEC.
+
+       01  DCLCT-CLIENT.
+           10 WC-NUMCLI            PIC S9(9) USAGE COMP.
+           10 WC-STATUT            PIC X(1).
+           10 WC-NOM000            PIC X(15).
+           10 WC-PRENOM            PIC X(15).
+           10 WC-VILLE             PIC X(15).
+           10 WC-CDPOST            PIC X(5).
+           10 WC-DATENT            PIC X(10).
+           10 WC-DATMAJ            PIC X(10).
+      ************************************************************
+       01  DCLCT-COMPTE.
+           10 WP-NUMCPT            PIC S9(9) USAGE COMP.
+           10 WP-STATUT            PIC X(1).
+           10 WP-SOLDE             PIC S9(9)V9(2) USAGE COMP-3.
+           10 WP-DATOUV            PIC X(10).
+           10 WP-DATMAJ            PIC X(10).
+
+      * DECLATION DUN CURSEUR CLIENT-COMPTE
+           EXEC SQL DECLARE CURSCLIENT CURSOR
+           FOR SELECT DISTINCT
+                    C.NUMCLI,
+                    C.STATUT,
+                    C.NOM000,
+                    C.PRENOM,
+                    VALUE(C.VILLE, ' '),
+                    VALUE(C.CDPOST, ' '),
+                    C.DATENT,
+                    C.DATMAJ,
+                    P.NUMCPT,
+                    P.STATUT,
+                    P.SOLDE,
+                    P.DATOUV,
+                    P.DATMAJ
+           FROM ADS0103.CT_CLIENT C JOIN ADS0103.CT_CPTCLI T
+           ON C.NUMCLI = T.NUMCLI,
+                ADS0103.CT_COMPTE P JOIN ADS0103.CT_CPTCLI
+           ON P.NUMCPT = T.NUMCPT
+           ORDER BY C.NUMCLI, P.NUMCPT
+           END-EXEC
+
+       01 NB-CLIENTS    PIC 99  VALUE ZEROES.
+      * DECLARATION DU FILE STATUS
+       01 FS-EDITION    PIC 99  VALUE ZEROES.
+
+       01 DATE8.
+           05 DATE8-SS PIC 99.
+           05 DATE8-AA PIC 99.
+           05 DATE8-MM PIC 99.
+           05 DATE8-JJ PIC 99.
+
+      * LIGNES D EDITION DES INFORMATIONS CLIENT ET COMPTE PR CP2
+       01  LIG1.
+           05                 PIC X(30)   VALUE SPACES.
+           05                 PIC X(36)   VALUE 'EDITION DES CLIENTS ET
+      -                      ' LEUR COMPTES'.
+           05                 PIC X(13)   VALUE SPACES.
+           05                 PIC X(05)   VALUE 'LE:'.
+
+           05 LIG1-DATE-JOUR.
+              10 LIG1-JJ      PIC 99.
+              10              PIC X      VALUE '/'.
+
+              10 LIG1-MM      PIC 99.
+              10              PIC X      VALUE '/'.
+              10 LIG1-AA      PIC 99.
+
+       01  LIG2.
+           05                 PIC X(30)  VALUE SPACES.
+           05                 PIC X(36)  VALUE ALL'-'.
+
+       01  LIG3.
+           05                 PIC X(06)   VALUE 'NUMCLI'.
+           05                 PIC X(01)   VALUE SPACES.
+           05                 PIC X(10)   VALUE 'STATUT'.
+           05                 PIC X(01)   VALUE SPACES.
+           05                 PIC X(20)   VALUE 'NOM , PRENOM'.
+           05                 PIC X(02)   VALUE SPACES.
+           05                 PIC X(15)   VALUE 'VILLE'.
+           05                 PIC X(01)   VALUE SPACES.
+           05                 PIC X(06)   VALUE 'CDPOST'.
+           05                 PIC X(02)   VALUE SPACES.
+           05                 PIC X(10)   VALUE 'D.ENTREE'.
+           05                 PIC X(01)   VALUE SPACES.
+           05                 PIC X(10)   VALUE 'D.MAJ'.
+           05                 PIC X(01)   VALUE SPACES.
+           05                 PIC X(06)   VALUE 'COMPTE'.
+           05                 PIC X(01)   VALUE SPACES.
+           05                 PIC X(11)   VALUE 'SOLDE'.
+
+       01  LIG4.
+           05 EC-NUMCLI       PIC 9(09).
+           05                 PIC X(01)   VALUE SPACES.
+           05 EC-STATUT       PIC X.
+           05                 PIC X(01)   VALUE SPACES.
+           05 EC-NOM-PRENOM   PIC X(20).
+           05                 PIC X(02)   VALUE SPACES.
+           05 EC-VILLE        PIC X(15).
+           05                 PIC X(01)   VALUE SPACES.
+           05 EC-CDPOST       PIC X(05).
+           05                 PIC X(02)   VALUE SPACES.
+           05 EC-DATENT       PIC X(10).
+           05                 PIC X(01)   VALUE SPACES.
+           05 EC-DATMAJ       PIC X(10).
+           05                 PIC X(01)   VALUE SPACES.
+           05 EP-NUMCPT       PIC 9(09).
+           05                 PIC X(01)   VALUE SPACES.
+           05 EP-SOLDE        PIC 9(9),99.
+
+       01  LIG5.
+           05                 PIC X(15)   VALUE 'NB CLIENTS :'.
+           05 NB-CLIENTS-ED   PIC Z9      VALUE ZEROES.
+
+       PROCEDURE DIVISION.
+           PERFORM DEBUT
+           PERFORM TRAITEMENT UNTIL SQLCODE = +100
+           PERFORM FIN.
+
+       DEBUT.
+           OPEN OUTPUT EDITION
+           IF FS-EDITION NOT = ZEROES
+           DISPLAY 'ERREUR OPEN EDITION: ' FS-EDITION
+           PERFORM FIN
+           END-IF
+
+      * ON ALIMENTE LA DATE DU JOUR
+           MOVE FUNCTION CURRENT-DATE TO DATE8
+           MOVE DATE8-AA TO LIG1-AA
+           MOVE DATE8-MM TO LIG1-MM
+           MOVE DATE8-JJ TO LIG1-JJ
+
+      * ECRITURE 1ERE LIGNE
+           MOVE LIG1     TO CP2-LIGNE
+           MOVE 1        TO CP2-SAUT
+           WRITE CP2-ENR
+
+      * ECRITURE 2EME LIGNE
+           MOVE LIG2     TO CP2-LIGNE
+           MOVE ' '      TO CP2-SAUT
+           WRITE CP2-ENR
+
+      * ECRITURE 3EME LIGNE
+           MOVE LIG3     TO CP2-LIGNE
+           MOVE ' '      TO CP2-SAUT
+           WRITE CP2-ENR
+
+           EXEC SQL OPEN CURSCLIENT  END-EXEC.
+           IF SQLCODE NOT = ZEROES
+              DISPLAY 'ERREUR OUVERTURE CURSEUR ' SQLCODE
+              PERFORM FIN
+           END-IF
+
+           PERFORM FETCH-CURSEUR
+           .
+
+       TRAITEMENT.
+           IF SQLCODE = ZEROES
+              ADD 1          TO NB-CLIENTS
+              MOVE WC-NUMCLI TO EC-NUMCLI
+              MOVE WC-STATUT TO EC-STATUT
+              STRING WC-NOM000 DELIMITED BY SPACE
+                   WC-PRENOM   DELIMITED BY SPACE
+                           INTO EC-NOM-PRENOM
+              MOVE WC-VILLE  TO EC-VILLE
+              MOVE WC-CDPOST TO EC-CDPOST
+              MOVE WC-DATENT TO EC-DATENT
+              MOVE WC-DATMAJ TO EC-DATMAJ
+              MOVE WP-NUMCPT TO EP-NUMCPT
+              MOVE WP-SOLDE  TO EP-SOLDE
+      * ECRITURE LIGNE DETAIL
+              MOVE LIG4     TO CP2-LIGNE
+              MOVE ' '      TO CP2-SAUT
+              WRITE CP2-ENR
+           ELSE
+              IF SQLCODE NOT = +100
+                 DISPLAY 'ERREUR FETCH CURSEUR ' SQLCODE
+                 PERFORM FIN
+              END-IF
+           END-IF
+           PERFORM FETCH-CURSEUR
+           .
+
+       FETCH-CURSEUR.
+           EXEC SQL FETCH CURSCLIENT
+           INTO  :WC-NUMCLI,
+                 :WC-STATUT,
+                 :WC-NOM000,
+                 :WC-PRENOM,
+                 :WC-VILLE,
+                 :WC-CDPOST,
+                 :WC-DATENT,
+                 :WC-DATMAJ,
+                 :WP-NUMCPT,
+                 :WP-STATUT,
+                 :WP-SOLDE,
+                 :WP-DATOUV,
+                 :WP-DATMAJ
+           END-EXEC
+           .
+
+       FIN.
+           MOVE NB-CLIENTS TO NB-CLIENTS-ED
+      * ECRITURE DERNIERE LIGNE
+           MOVE LIG5     TO CP2-LIGNE
+           MOVE ' '      TO CP2-SAUT
+           WRITE CP2-ENR
+
+           CLOSE EDITION
+           EXEC SQL CLOSE CURSCLIENT END-EXEC
+           STOP RUN.

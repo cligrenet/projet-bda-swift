@@ -1,0 +1,60 @@
+//ADS0103C JOB 'ADS0103',MSGCLASS=H,REGION=4M,COND=(4,LT),
+//         CLASS=A,MSGLEVEL=(1,1),NOTIFY=&SYSUID,TIME=(0,30),
+//         RESTART=*
+//**********************************************************************
+//*           ETAPE DE COMPILATION COBOL DB2                           *
+//**********************************************************************
+//*
+//        JCLLIB ORDER=(ADSSYS.ADREF.XV99R00.DB2.ISPSLIB,
+//        ADSSYS.ADREF.XV99R00.COBOL.ISPSLIB)
+//*
+//**********************************************************************
+//* LISTE DES BIBLIOTHEQUES DES LOADS MODULES                          *
+//**********************************************************************
+//JOBLIB   DD   DSN=ADS01.ADS0103.LOAD,DISP=SHR
+//*
+//* ETAPE DE COMPILATION DE L'ACCESSEUR
+//*
+//STEP1   EXEC PCOMPDB2,
+//         MBR=SP2,
+//         SRC=ADS01.ADS0103.SRC,
+//         LMOD=ADS01.ADS0103.LOAD,
+//         LIB=ADS01.ADS0103.CPY
+//*
+//**********************************************************************
+//* BIND DU PROGRAMME                                                  *
+//**********************************************************************
+//STEP2     EXEC PGM=IKJEFT01,DYNAMNBR=20,COND=(8,LT)
+//STEPLIB   DD  DSN=DSN910.SDSNEXIT,DISP=SHR
+//          DD  DSN=DSN910.SDSNLOAD,DISP=SHR
+//DBRMLIB   DD  DSN=ADSSYS.ADREF.XV99R00.DBRM,DISP=SHR
+//SYSPRINT  DD  SYSOUT=*
+//SYSTSPRT  DD  SYSOUT=*
+//SYSUDUMP  DD  SYSOUT=*
+//SYSTSIN   DD  *
+DSN SYSTEM(DB9G)
+BIND PLAN(SP2)       -
+     MEMBER(SP2)     -
+     OWNER(ADS0103)
+END
+//*
+//**********************************************************************
+//* EXECUTION PROG SP2    DB2                                          *
+//**********************************************************************
+//STEP3    EXEC PGM=IKJEFT01,DYNAMNBR=20,COND=(8,LT)
+//STEPLIB   DD  DSN=DSN910.SDSNEXIT,DISP=SHR
+//          DD  DSN=DSN910.SDSNLOAD,DISP=SHR
+//          DD  DSN=DSN910.RUNLIB.LOAD,DISP=SHR
+//DBRMLIB   DD  DSN=ADSSYS.ADREF.XV99R00.DBRM,DISP=SHR
+//SYSUDUMP DD   SYSOUT=*
+//SYSTSPRT DD   SYSOUT=*
+//SYSOUT   DD   SYSOUT=*
+//SYSPRINT DD   SYSOUT=*
+//EDITION  DD   SYSOUT=*
+//SYSTSIN  DD   *
+DSN SYSTEM(DB9G)
+RUN PROGRAM(SP2) PLAN(SP2)     -
+    LIB('ADS01.ADS0103.LOAD')
+END
+/*
+//

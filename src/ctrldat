@@ -1,0 +1,147 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CTRLDAT.
+      ******************************************************************
+      *  SOUS-PROGRAMME DE CONTROLE ET DE FORMATTAGE DE DATE           *
+      ******************************************************************
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+
+       01  I         PIC 99    VALUE ZEROES.
+
+       01  RESULTAT  PIC 99    VALUE ZEROES.
+       01  RESTE     PIC 99    VALUE ZEROES.
+
+       01  TOP-ERR   PIC 99.
+           88 OK               VALUE ZEROES.
+           88 ERREUR           VALUE  9 .
+
+       01            PIC X     VALUE SPACES.
+           88 ANNEE-BISSEXTILE VALUE ZEROES.
+           88 ANNEE-NON-BISSEXTILE VALUE '1'.
+
+      * DATE SAISIE
+       01  W-DATE.
+           05 W-ANNEE.
+            10 W-SS          PIC 99      VALUE ZEROES.
+            10 W-AA          PIC 99      VALUE ZEROES.
+           05 REDEFINES W-ANNEE.
+            10               PIC X.
+            10 W-MILLENAIRE  PIC 999.
+           05 W-MOIS         PIC 99      VALUE ZEROES.
+           05 W-JOUR         PIC 99      VALUE ZEROES.
+
+      * DATE FORMATE
+       01  W-DATE-FORMATE.
+           05 W-ANNEE-FORMATE PIC 9(4).
+           05 FILLER         PIC X       VALUE '-'.
+           05 W-MOIS-FORMATE PIC 99.
+           05 FILLER         PIC X       VALUE '-'.
+           05 W-JOUR-FORMATE PIC 99.
+
+
+       LINKAGE SECTION.
+      * SWIFT
+      *    COPY ZCOMS.
+      *****************
+      * COMPTE-CLIENT
+      * ZONE DE COMMUNICATION COMMUNE ENTRE PROG ET CE SOUS-PROG
+       01  Z-COMDAT.
+      * DATE SUR 8 AU FORMAT SSAAMMJJ
+           05 Z-DATE             PIC X(08).
+      * CODE RETOUR : 0 = OK, 1 = ERREUR
+           05 Z-CODRET           PIC X(01).
+      * DATE RETOUR POUR SQL
+           05 Z-DATEFORMATE      PIC X(10).
+
+
+      * SWIFT - COMPTE CLIENT
+      *PROCEDURE DIVISION USING ZCOMS.
+      * COMPTE-CLIENT
+       PROCEDURE DIVISION USING Z-COMDAT.
+      * SWIFT
+      *       MOVE ZCOM-DATE      TO W-DATE
+      * COMPTE-CLIENT
+              MOVE Z-DATE         TO W-DATE
+
+           PERFORM CONTROLE-DATE
+           IF OK
+              PERFORM FORMATTAGE-DATE
+           END-IF
+      * SWIFT
+      *    MOVE TOP-ERR TO ZCOM-CODE-RETOUR
+      * COMPTE-CLIENT
+           MOVE TOP-ERR TO Z-CODRET
+
+           GOBACK.
+
+       CONTROLE-DATE.
+           SET OK TO TRUE
+
+      * MOIS INVALIDE
+           IF OK
+              IF W-MOIS > 12 OR < 1
+                 DISPLAY 'MOIS INVALIDE'
+                 SET ERREUR TO TRUE
+              END-IF
+           END-IF
+
+      * JOUR INVALIDE
+           IF OK
+              IF ((W-MOIS = 1 OR 3 OR 5 OR 7 OR 8 OR 10 OR 12)
+                 AND (W-JOUR > 31 OR < 1))
+              OR ((W-MOIS = 2 OR 4 OR 6 OR 9 OR 11)
+                 AND (W-JOUR > 30 OR < 1))
+                 DISPLAY 'JOUR INVALIDE'
+                 SET ERREUR TO TRUE
+              END-IF
+           END-IF
+
+      * CAS PARTICULIER : FEVRIER
+           IF OK
+              IF W-MOIS = 2
+                 PERFORM CALCUL-BISSEXTILE
+                 IF (ANNEE-BISSEXTILE     AND W-JOUR > 29)
+                 OR (ANNEE-NON-BISSEXTILE AND W-JOUR > 28)
+                    DISPLAY 'JOUR FEVRIER INVALIDE'
+                    SET ERREUR TO TRUE
+                 END-IF
+              END-IF
+           END-IF.
+
+       CALCUL-BISSEXTILE.
+           SET ANNEE-NON-BISSEXTILE TO TRUE.
+
+      * LES MILLENAIRES SONT BISSEXTILES
+           IF W-MILLENAIRE = ZEROES
+              SET ANNEE-BISSEXTILE TO TRUE
+           END-IF.
+
+      * LES CENTENAIRES NE SONT PAS BISSEXTILES
+           IF  W-MILLENAIRE NOT = ZEROES
+           AND W-AA             = ZEROES
+              SET ANNEE-NON-BISSEXTILE    TO TRUE
+           END-IF.
+      *
+      * CALCUL DES ANNEES BISSEXTILES
+           IF W-AA NOT = ZEROES
+              DIVIDE 4 INTO W-AA GIVING RESULTAT REMAINDER RESTE
+              IF RESTE = ZEROES
+                 SET ANNEE-BISSEXTILE     TO TRUE
+              ELSE
+                 SET ANNEE-NON-BISSEXTILE TO TRUE
+              END-IF
+           END-IF.
+
+       FORMATTAGE-DATE.
+           MOVE W-ANNEE        TO W-ANNEE-FORMATE
+           MOVE W-MOIS         TO W-MOIS-FORMATE
+           MOVE W-JOUR         TO W-JOUR-FORMATE
+      * SWIFT
+      *    MOVE W-DATE-FORMATE TO ZCOM-DATE-FORMATE.
+      * COMPTE-CLIENT
+           MOVE W-DATE-FORMATE TO Z-DATEFORMATE
+           .

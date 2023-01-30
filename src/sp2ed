@@ -1,0 +1,312 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. SP2.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+            DECIMAL-POINT IS COMMA.
+
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+            SELECT EDITION ASSIGN TO EDITION
+                   FILE STATUS    IS FS-EDITION.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD  EDITION
+           RECORDING MODE IS F.
+       01  SP2-ENR.
+           05 SP2-SAUT  PIC X.
+           05 SP2-LIGNE PIC X(132).
+
+       WORKING-STORAGE SECTION.
+           EXEC SQL INCLUDE SQLCA     END-EXEC.
+           EXEC SQL INCLUDE MSWIFT END-EXEC.
+
+      ***********************************************************
+       01  DCLST-MSWIFT.
+           10 WM-REFMSG            PIC S9(9) USAGE COMP.
+           10 WM-TYPMSG            PIC X(1).
+           10 WM-DATVAL            PIC X(10).
+           10 WM-CODDEV            PIC X(3).
+           10 WM-MTTRAN            PIC S9(9)V9(9) USAGE COMP-3.
+           10 WM-NUMCLID           PIC S9(9) USAGE COMP.
+           10 WM-NOMCLID           PIC X(20).
+           10 WM-NUMCPTD           PIC S9(9) USAGE COMP.
+           10 WM-BICDEB            PIC X(11).
+           10 WM-BICCOR            PIC X(11).
+           10 WM-NUMCLIC           PIC S9(9) USAGE COMP.
+           10 WM-NOMCLIC           PIC X(20).
+           10 WM-NUMCPTC           PIC S9(9) USAGE COMP.
+           10 WM-BICCRD            PIC X(11).
+           10 WM-DATCRE            PIC X(10).
+      ******************************************************************
+      * DECLATION DUN CURSEUR DES MESSAGES DE VIREMENT DE COMPTE
+           EXEC SQL DECLARE CURSMSG CURSOR
+           FOR SELECT
+                         REFMSG,
+                         TYPMSG,
+                         DATVAL,
+                         CODDEV,
+                         MTTRAN,
+                         VALUE(NUMCLID, 0),
+                         VALUE(NOMCLID, ' '),
+                         VALUE(NUMCPTD, 0),
+                         BICDEB,
+                         BICCOR,
+                         VALUE(NUMCLIC, 0),
+                         VALUE(NOMCLIC, ' '),
+                         VALUE(NUMCPTC, 0),
+                         BICCRD ,
+                         DATCRE
+           FROM ADS0103.ST_MSWIFT
+           ORDER BY REFMSG
+           END-EXEC
+
+      * DECLARATION DU FILE STATUS
+       01 FS-EDITION    PIC 99  VALUE ZEROES.
+
+       01 DATE8.
+           05 DATE8-SS PIC 99.
+           05 DATE8-AA PIC 9999.
+           05 DATE8-MM PIC 99.
+           05 DATE8-JJ PIC 99.
+
+       01 DATVAL.
+           05 DATVAL-SS PIC 99.
+           05 DATVAL-AA PIC 9999.
+           05 DATVAL-MM PIC 99.
+           05 DATVAL-JJ PIC 99.
+
+      * LIGNES D EDITION DES INFORMATIONS CLIENT ET COMPTE PR SP2
+       01  LIG1.
+           05                 PIC X(36)   VALUE SPACES.
+           05                 PIC X(26)   VALUE 'EDITION DES MESSAGES SW
+      -                      'IFT'.
+           05                 PIC X(30)   VALUE SPACES.
+           05                 PIC X(05)   VALUE 'LE:'.
+
+           05 LIG1-DATE-JOUR.
+              10 LIG1-JJ      PIC 99.
+              10              PIC X      VALUE '/'.
+              10 LIG1-MM      PIC 99.
+              10              PIC X      VALUE '/'.
+              10 LIG1-AA      PIC 9999.
+
+       01  LIG2.
+           05                 PIC X(36)  VALUE SPACES.
+           05                 PIC X(23)  VALUE ALL '-'.
+
+       01  LIG3.
+           05                 PIC X(22) VALUE 'REFERENCE MESSAGE   :'.
+           05 E-REFMSG        PIC Z(9)  VALUE ZEROES.
+
+       01  LIG4.
+           05                 PIC X(17) VALUE ALL '-'.
+           05                 PIC X(03) VALUE SPACES.
+           05                 PIC X(09) VALUE ALL '-'.
+
+       01  LIG5.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'TYPE MESSAGE        :'.
+           05 E-TYPMSG        PIC 999   VALUE ZEROES.
+
+       01  LIG6.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'DATE DE VALEUR      :'.
+           05 E-DATVAL.
+              10 E-DATVAL-JJ  PIC 99.
+              10              PIC X           VALUE '/'.
+              10 E-DATVAL-MM PIC 99.
+              10              PIC X           VALUE '/'.
+              10 E-DATVAL-AA  PIC 9999.
+
+       01  LIG7.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'DEVISE              :'.
+           05 E-CODDEV        PIC X(3)  VALUE SPACES.
+
+       01  LIG8.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'MONTANT TRANSFERE   :'.
+           05 E-MTTRAN        PIC 9(9),99     VALUE ZEROES.
+
+       01  LIG9.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'CLIENT DEBITE       :'.
+           05 E-NUMCLID       PIC Z(9)  VALUE ZEROES.
+           05 E-NOMCLID       PIC X(20) VALUE SPACES.
+
+       01  LIG10.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'COMPTE DEBITE       :'.
+           05 E-NUMCPTD       PIC Z(9)  VALUE ZEROES.
+
+       01  LIG11.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(24) VALUE 'BIC BANQUE DEBITEE  :'.
+           05 E-BICDEB        PIC X(11) VALUE SPACES.
+
+       01  LIG12.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(24) VALUE 'BIC BANQUE CORRESP  :'.
+           05 E-BICCOR        PIC X(11) VALUE SPACES.
+
+       01  LIG13.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'CLIENT CREDITE      :'.
+           05 E-NUMCLIC       PIC Z(9)    VALUE ZEROES.
+           05 E-NOMCLIC       PIC X(20)   VALUE SPACES.
+
+       01  LIG14.
+           05                 PIC X(05) VALUE SPACES.
+           05                 PIC X(22) VALUE 'BIC BANQUE CREDITEE :'.
+           05 E-BICCRD        PIC X(11) VALUE SPACES.
+
+       PROCEDURE DIVISION.
+           PERFORM DEBUT
+           PERFORM TRAITEMENT UNTIL SQLCODE = +100
+           PERFORM FIN.
+
+       DEBUT.
+           OPEN OUTPUT EDITION
+           IF FS-EDITION NOT = ZEROES
+           DISPLAY 'ERREUR OPEN EDITION: ' FS-EDITION
+           PERFORM FIN
+           END-IF
+
+      * ON ALIMENTE LA DATE DU JOUR
+           MOVE FUNCTION CURRENT-DATE TO DATE8
+           MOVE DATE8-AA TO LIG1-AA
+           MOVE DATE8-MM TO LIG1-MM
+           MOVE DATE8-JJ TO LIG1-JJ
+
+           MOVE FUNCTION CURRENT-DATE TO DATVAL
+           MOVE DATVAL-AA TO E-DATVAL-AA
+           MOVE DATVAL-MM TO E-DATVAL-MM
+           MOVE DATVAL-JJ TO E-DATVAL-JJ
+
+      * ECRITURE 1ERE LIGNE
+           MOVE LIG1     TO SP2-LIGNE
+           MOVE 1        TO SP2-SAUT
+           WRITE SP2-ENR
+
+      * ECRITURE 2EME LIGNE
+           MOVE LIG2     TO SP2-LIGNE
+           MOVE ' '      TO SP2-SAUT
+           WRITE SP2-ENR
+
+           EXEC SQL OPEN CURSMSG END-EXEC.
+           IF SQLCODE NOT = ZEROES
+              DISPLAY 'ERREUR OUVERTURE CURSEUR ' SQLCODE
+              PERFORM FIN
+           END-IF
+
+           PERFORM FETCH-CURSEUR
+           .
+
+       TRAITEMENT.
+           IF SQLCODE = ZEROES
+              EVALUATE WM-TYPMSG
+               WHEN '1'
+                 MOVE WM-REFMSG   TO E-REFMSG
+                 MOVE LIG3        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE LIG4        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE '103'       TO E-TYPMSG
+                 MOVE LIG5        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-DATVAL   TO E-DATVAL
+                 MOVE LIG6        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-CODDEV   TO E-CODDEV
+                 MOVE LIG7        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-MTTRAN   TO E-MTTRAN
+                 MOVE LIG8        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-NUMCLID  TO E-NUMCLID
+                 MOVE WM-NOMCLID  TO E-NOMCLID
+                 MOVE LIG9        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-NUMCPTD  TO E-NUMCPTD
+                 MOVE LIG10       TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-BICDEB   TO E-BICDEB
+                 MOVE LIG11       TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-BICCOR   TO E-BICCOR
+                 MOVE LIG12       TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-NUMCLIC  TO E-NUMCLIC
+                 MOVE WM-NOMCLIC  TO E-NOMCLIC
+                 MOVE LIG13       TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-BICCRD   TO E-BICCRD
+                 MOVE LIG14       TO SP2-LIGNE
+                 WRITE SP2-ENR
+               WHEN '2'
+                 MOVE WM-REFMSG   TO E-REFMSG
+                 MOVE LIG3        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE LIG4        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE '202'       TO E-TYPMSG
+                 MOVE LIG5        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-DATVAL   TO E-DATVAL
+                 MOVE LIG6        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-CODDEV   TO E-CODDEV
+                 MOVE LIG7        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-MTTRAN   TO E-MTTRAN
+                 MOVE LIG8        TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-BICDEB   TO E-BICDEB
+                 MOVE LIG11       TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-BICCOR   TO E-BICCOR
+                 MOVE LIG12       TO SP2-LIGNE
+                 WRITE SP2-ENR
+                 MOVE WM-BICCRD   TO E-BICCRD
+                 MOVE LIG14       TO SP2-LIGNE
+                 WRITE SP2-ENR
+              END-EVALUATE
+           ELSE
+              IF SQLCODE NOT = +100
+                 DISPLAY 'ERREUR FETCH CURSEUR ' SQLCODE
+                 PERFORM FIN
+              END-IF
+           END-IF
+           PERFORM FETCH-CURSEUR
+            .
+
+       FETCH-CURSEUR.
+           EXEC SQL FETCH CURSMSG
+           INTO :WM-REFMSG,
+                :WM-TYPMSG,
+                :WM-DATVAL,
+                :WM-CODDEV,
+                :WM-MTTRAN,
+                :WM-NUMCLID,
+                :WM-NOMCLID,
+                :WM-NUMCPTD,
+                :WM-BICDEB,
+                :WM-BICCOR,
+                :WM-NUMCLIC,
+                :WM-NOMCLIC,
+                :WM-NUMCPTC,
+                :WM-BICCRD,
+                :WM-DATCRE
+           END-EXEC
+           IF SQLCODE NOT = ZEROES AND +100
+              DISPLAY 'ERREUR FETCH CURSEUR ' SQLCODE
+              PERFORM FIN
+           END-IF
+           .
+
+       FIN.
+           CLOSE EDITION
+           EXEC SQL CLOSE CURSMSG    END-EXEC
+           STOP RUN.

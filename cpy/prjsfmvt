@@ -1,0 +1,15 @@
+      *---------------------------------------------*
+      *  DESCRIPTION FICHIER SFMVT  PROJET FINALE   *
+      *---------------------------------------------*
+       01 :PREF:-REC-SWIFT.
+           05 :PREF:-NUMENR     PIC 9(2).
+           05 :PREF:-NUMCPTD    PIC 9(9).
+           05 :PREF:-DATVAL     PIC 9(8).
+           05 :PREF:-CODDEV     PIC X(3).
+           05 :PREF:-MTTRAN-X.
+             10 :PREF:-MTTRAN   PIC S9(9)V9(9).
+           05 :PREF:-NOMCLIC    PIC X(20).
+           05 :PREF:-NUMCPTC-X.
+             10 :PREF:-NUMCPTC  PIC 9(9).
+           05 :PREF:-BICCRD     PIC X(11).
+           05 FILLER            PIC X(30).

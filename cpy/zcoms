@@ -1,0 +1,65 @@
+       01 ZCOMS.
+          05 ZCOM-CODE.
+             10 ZCOM-ACTION            PIC X.
+             10 ZCOM-CODE-RETOUR       PIC 99.
+                 88 ZCOM-OK            VALUE ZEROES.
+                 88 ZCOM-NON-TROUVE    VALUE 1.
+                 88 ZCOM-EN-DOUBLE     VALUE 2.
+                 88 ZCOM-FIN-TABLE     VALUE 3.
+                 88 ZCOM-ERREUR        VALUE 9.
+            10 ZCOM-SQLCODE            PIC +(9)9.
+          05 ZCOM-LIGNE-BIC.
+             10 ZCOM-BIC-BIC000        PIC X(11).
+             10 ZCOM-BIC-CODDEV        PIC X(3).
+             10 ZCOM-BIC-INDCOR        PIC X.
+          05 ZCOM-LIGNE-DEVISE.
+             10 ZCOM-DEVISE-CODDEV     PIC X(3).
+             10 ZCOM-DEVISE-LIBDEV     PIC X(15).
+          05 ZCOM-LIGNE-CHANGE.
+             10 ZCOM-CHANGE-CODDEV1    PIC X(3).
+             10 ZCOM-CHANGE-CODDEV2    PIC X(3).
+             10 ZCOM-CHANGE-CHANGE     PIC S9(9)V9(9) USAGE COMP-3.
+          05 ZCOM-LIGNE-MSWIFT.
+             10 ZCOM-SWIFT-REFMSG      PIC S9(9) USAGE COMP.
+             10 ZCOM-SWIFT-TYPMSG      PIC X(1).
+             10 ZCOM-SWIFT-DATVAL      PIC X(10).
+             10 ZCOM-SWIFT-CODDEV      PIC X(3).
+             10 ZCOM-SWIFT-MTTRAN      PIC S9(9)V9(9) USAGE COMP-3.
+             10 ZCOM-SWIFT-NUMCLID     PIC S9(9) USAGE COMP.
+             10 ZCOM-SWIFT-NOMCLID     PIC X(20).
+             10 ZCOM-SWIFT-NUMCPTD     PIC S9(9) USAGE COMP.
+             10 ZCOM-SWIFT-BICDEB      PIC X(11).
+             10 ZCOM-SWIFT-BICCOR      PIC X(11).
+             10 ZCOM-SWIFT-NUMCLIC     PIC S9(9) USAGE COMP.
+             10 ZCOM-SWIFT-NOMCLIC     PIC X(20).
+             10 ZCOM-SWIFT-NUMCPTC     PIC S9(9) USAGE COMP.
+             10 ZCOM-SWIFT-BICCRD      PIC X(11).
+             10 ZCOM-SWIFT-DATCRE      PIC X(10).
+          05 ZCOM-LIGNE-COMPTE.
+             10 ZCOM-COMPTE-NUMCPT     PIC S9(9) USAGE COMP.
+             10 ZCOM-COMPTE-STATUT     PIC X.
+             10 ZCOM-COMPTE-SOLDE      PIC S9(9)V9(2) USAGE COMP-3.
+             10 ZCOM-COMPTE-DATOUV     PIC X(10).
+             10 ZCOM-COMPTE-DATMAJ     PIC X(10).
+          05 ZCOM-LIGNE-CLIENT.
+             10 ZCOM-CLIENT-NUMCLI     PIC S9(9) USAGE COMP.
+             10 ZCOM-CLIENT-STATUT     PIC X.
+             10 ZCOM-CLIENT-NOM        PIC X(15).
+             10 ZCOM-CLIENT-PRENOM     PIC X(15).
+             10 ZCOM-CLIENT-VILLE      PIC X(15).
+             10 ZCOM-CLIENT-CDPOST     PIC X(5).
+             10 ZCOM-CLIENT-DATENT     PIC X(10).
+             10 ZCOM-CLIENT-DATMAJ     PIC X(10).
+          05 ZCOM-LIGNE-CPTCLI.
+             10 ZCOM-CPTCLI-NUMCLI     PIC S9(9) USAGE COMP.
+             10 ZCOM-CPTCLI-NUMCPT     PIC S9(9) USAGE COMP.
+          05 ZCOM-LIGNE-OPER.
+             10 ZCOM-OPER-NUMCPT       PIC S9(9) COMP.
+             10 ZCOM-OPER-NUMOPE       PIC S9(9) COMP.
+             10 ZCOM-OPER-TEXT0        PIC X(80).
+             10 ZCOM-OPER-MTOPER       PIC S9(9)V9(9)  COMP-3.
+             10 ZCOM-OPER-DATEOP       PIC X(10).
+          05 ZCOM-LIGNE-DATE.
+             10 ZCOM-DATE              PIC X(08).
+             10                        PIC X.
+             10 ZCOM-DATE-FORMATE      PIC X(10).

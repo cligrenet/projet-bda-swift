@@ -1,0 +1,524 @@
+      ***********************************************
+      ***   PROJET FIN DE FORMATION         *********
+      ***   GROUPE4                         *********
+      ***   CP1 CONTROLE DU FICHIER CFMVT   *********
+      ***********************************************
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID.      CP1.
+       AUTHOR.         GROUPE4.
+       DATE-WRITTEN.  16-01-2023.
+      ***********************************************
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM3278 WITH DEBUGGING MODE.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+      *****************************
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+      *-------------------------------*
+      *  FICHIER DES MOUVEMENTS INPUT *
+      *-------------------------------*
+           SELECT CFMVT ASSIGN TO INP001
+           ORGANIZATION IS SEQUENTIAL
+           ACCESS MODE  IS SEQUENTIAL
+           FILE STATUS  IS FS-CFMVT.
+      *-------------------------------*
+      *  FICHIER LOGS ERREURS OUTPUT  *
+      *-------------------------------*
+           SELECT LOGERR ASSIGN TO OUT001
+           ORGANIZATION IS SEQUENTIAL
+           ACCESS MODE  IS SEQUENTIAL
+           FILE STATUS  IS FS-LOGERR.
+      ******************************
+       DATA DIVISION.
+       FILE SECTION.
+      *---------------------*
+      *  COPY DESCPT CFMVT  *
+      *---------------------*
+       FD CFMVT
+           RECORDING MODE IS F
+           DATA RECORD    IS CFMVTB-REC.
+           COPY PRJCFMVT REPLACING ==:PREF:== BY CFMVTB.
+      *----------*
+       FD LOGERR
+           RECORDING MODE IS F
+           DATA RECORD    IS LOGERRB-REC.
+       01 LOGERRB-REC     PIC X(133).
+      *================================================================*
+      *  *******           WORKING-STORAGE SECTION             ******  *
+      *================================================================*
+       WORKING-STORAGE SECTION.
+      *--------------------------------------------*
+      *  DESCRIPTION ENREGISTREMENT FICHIER CFMVT  *
+      *--------------------------------------------*
+           COPY PRJCFMVT REPLACING ==:PREF:== BY WS-CFMVT.
+      *--------------------------*
+      *---------------------------------------------*
+      *  DESCRIPTION ENREGISTREMENT FICHIER LOGERR  *
+      *---------------------------------------------*
+           COPY LOGERR.
+      *-----------------------------------------*
+      *  VARIABLE DE CONTROLE DU FICHIER CFMVT  *
+      *-----------------------------------------*
+       01 FS-CFMVT                PIC 9(2).
+       01 EOF-CFMVT               PIC X VALUE 'N'.
+           88 EOF-Y                     VALUE 'Y'.
+           88 EOF-N                     VALUE 'N'.
+       01 FIELD-ST                PIC X VALUE '0'.
+           88 FIELD-OK                  VALUE '0'.
+           88 FIELD-KO                  VALUE '1'.
+       01 READ-CPT                PIC 9(2) VALUE ZERO.
+      *----------------------------------*
+      *  VARIABLE GESTION FICHIER LOGERR *
+      *----------------------------------*
+           COPY CP1ERR.
+       01 FS-LOGERR               PIC 9(2).
+       01 TEMP-NUMENR             PIC 9(2).
+      *-------------------------*
+      *  VARIABLE GESTION DATE  *
+      *-------------------------*
+       01 WS-FORMAT-CDATE.
+           05 WS-FORMAT-YEAR      PIC 9(4).
+           05 FILLER              PIC X VALUE '-'.
+           05 WS-FORMAT-MONTH     PIC 9(2).
+           05 FILLER              PIC X VALUE '-'.
+           05 WS-FORMAT-DAY       PIC 9(2).
+       01 WS-FORMAT-DATENT        PIC X(10).
+       01 WS-FORMAT-DATOUV        PIC X(10).
+      *-------------------*
+      *  SOUS PROGRAMMES  *
+      *-------------------*
+       01 CA1                     PIC X(8).
+       01 CTRLDAT                 PIC X(8).
+      *--------------------------*
+      *  ZONE COMMUNICATION CA1  *
+      *--------------------------*
+           COPY ZCOMC.
+      *-----------------------------*
+      *  ZONE COMMUNICATION CTRLDAT *
+      *-----------------------------*
+       01 ZCOMDAT.
+           05 ZDATE               PIC X(8).
+           05 ZDATE-CODRET        PIC X.
+           05 ZDATE-FORMAT        PIC X(10).
+       01 SOLDE-CTRL              PIC 9(15).
+      *-------------------------------------*
+      * **** FIN DECLARATION VARIABLES **** *
+      *-------------------------------------*
+      ******************************************************************
+      * ******              PROCDEDURE DIVISION                 ****** *
+      ******************************************************************
+       PROCEDURE DIVISION.
+      *===================*
+           PERFORM DEBUT
+           PERFORM TRAITEMENT
+           PERFORM FIN
+           .
+      *----------------------------*
+       DEBUT.
+           INITIALIZE WS-CFMVT-REC
+           INITIALIZE ZCOM
+
+           MOVE 'CA1'        TO CA1
+           MOVE 'CTRLDAT'    TO CTRLDAT
+
+           PERFORM OPEN-CFMVT
+           PERFORM OPEN-LOGERR
+           PERFORM FORMAT-CURRENTDATE
+
+           PERFORM WRITE-TITLE-LOGERR
+           .
+
+       TRAITEMENT.
+           PERFORM READ-CFMVT UNTIL EOF-Y
+           .
+
+       FIN.
+           CLOSE CFMVT
+           CLOSE LOGERR
+           DISPLAY READ-CPT
+           STOP RUN
+           .
+      *=====================================================*
+      * OUVERTURE / LECTURE DU FICHIER MOUVEMENT EN LECTURE *
+      *=====================================================*
+       OPEN-CFMVT.
+           OPEN INPUT CFMVT
+           IF FS-CFMVT NOT EQUAL ZERO
+               DISPLAY 'ERROR OPENING FILE, STATUS : ' FS-CFMVT
+               PERFORM FIN
+           END-IF
+           .
+      *=======================================*
+       READ-CFMVT.
+           READ CFMVT       INTO WS-CFMVT-REC
+           AT END SET EOF-Y TO TRUE
+           NOT AT END
+             DISPLAY WS-CFMVT-SOLDE
+             PERFORM FIELDS-CTRL
+             PERFORM CHECK-IN-TABLE
+             PERFORM CALL-CA1
+             PERFORM WRITE-LOGERR-SEP
+             ADD 1 TO READ-CPT
+             DISPLAY '--------------------------'
+           .
+      *======================================================*
+      * OUVERTURE / ECRITURE DU FICHIER MOUVEMENT EN LECTURE *
+      *======================================================*
+       OPEN-LOGERR.
+           OPEN OUTPUT LOGERR
+           IF FS-LOGERR NOT EQUAL ZERO
+               DISPLAY 'ERROR OPENING FILE, STATUS : ' FS-LOGERR
+               PERFORM FIN
+           END-IF
+           .
+      *------------------------*
+       WRITE-TITLE-LOGERR.
+           MOVE  WS-FORMAT-CDATE    TO   LOGERR-CDATE
+           WRITE LOGERRB-REC        FROM LINE01
+           WRITE LOGERRB-REC        FROM LINE02
+           WRITE LOGERRB-REC        FROM LINESPACE
+           .
+
+       WRITE-LINE-NUMENR.
+           MOVE WS-CFMVT-NUMENR     TO   LOGERR-NUMENR
+           WRITE LOGERRB-REC        FROM LINE03
+           .
+
+       WRITE-LINE-TYPEMVT.
+           EVALUATE WS-CFMVT-CODMVT
+             WHEN '1'
+               MOVE 'CREATION DE CLIENT'
+                                    TO LOGERR-TYPEMVT
+             WHEN '2'
+               MOVE 'CREATION DE COMPTE'
+                                    TO LOGERR-TYPEMVT
+             WHEN '3'
+               MOVE 'CREATION DE CLIENT ET COMPTE'
+                                    TO LOGERR-TYPEMVT
+             WHEN '4'
+               MOVE 'MODIFICATION CLIENT'
+                                    TO LOGERR-TYPEMVT
+             WHEN OTHER
+               MOVE 'INCONNU'       TO LOGERR-TYPEMVT
+           END-EVALUATE
+           WRITE LOGERRB-REC        FROM LINE04
+           WRITE LOGERRB-REC        FROM LINESPACE
+           .
+
+       WRITE-LINE-RECINFO.
+           MOVE WS-CFMVT-CODMVT     TO   LOGERR-CODMVT
+           MOVE WS-CFMVT-NUMCLI     TO   LOGERR-NUMCLI
+           MOVE WS-CFMVT-STATUT     TO   LOGERR-STATUT
+           MOVE WS-CFMVT-NOM        TO   LOGERR-NOM
+           MOVE WS-CFMVT-PRENOM     TO   LOGERR-PRENOM
+           MOVE WS-CFMVT-VILLE      TO   LOGERR-VILLE
+           MOVE WS-CFMVT-CDPOST     TO   LOGERR-CDPOST
+           MOVE WS-CFMVT-DATENT     TO   LOGERR-DATENT
+           MOVE WS-CFMVT-NUMCPT     TO   LOGERR-NUMCPT
+           MOVE WS-CFMVT-DATOUV     TO   LOGERR-DATOUV
+           MOVE WS-CFMVT-SOLDE-CTRL TO   LOGERR-SOLDE
+
+           WRITE LOGERRB-REC        FROM LINE05
+           WRITE LOGERRB-REC        FROM LINE05-1
+           WRITE LOGERRB-REC        FROM LINE06
+           WRITE LOGERRB-REC        FROM LINESPACE
+           .
+
+       WRITE-LOGERR.
+           IF FIELD-KO
+               MOVE MSGERR          TO LOGERR-MSGERR
+               WRITE LOGERRB-REC    FROM LINE07
+           END-IF
+           .
+
+       WRITE-LOGERR-SEP.
+           IF FIELD-KO
+               WRITE LOGERRB-REC    FROM LINESEPARATION
+           END-IF
+           .
+      *===============*
+      * APPEL DU CRUD *
+      *===============*
+       CALL-CA1.
+           IF FIELD-OK
+             MOVE WS-CFMVT-CODMVT        TO ZCOM-ACTION
+             MOVE WS-CFMVT-NUMCLI        TO ZCOM-CLIENT-NUMCLI
+             MOVE WS-CFMVT-STATUT        TO ZCOM-CLIENT-STATUT
+             MOVE WS-CFMVT-NOM           TO ZCOM-CLIENT-NOM
+             MOVE WS-CFMVT-PRENOM        TO ZCOM-CLIENT-PRENOM
+             MOVE WS-CFMVT-VILLE         TO ZCOM-CLIENT-VILLE
+             MOVE WS-CFMVT-CDPOST        TO ZCOM-CLIENT-CDPOST
+             MOVE WS-FORMAT-DATENT       TO ZCOM-CLIENT-DATENT
+             MOVE WS-FORMAT-CDATE        TO ZCOM-CLIENT-DATMAJ
+
+             MOVE WS-CFMVT-NUMCPT        TO ZCOM-COMPTE-NUMCPT
+             MOVE WS-CFMVT-STATUT        TO ZCOM-COMPTE-STATUT
+             MOVE WS-CFMVT-SOLDE         TO ZCOM-COMPTE-SOLDE
+             MOVE WS-FORMAT-DATOUV       TO ZCOM-COMPTE-DATOUV
+             MOVE WS-FORMAT-CDATE        TO ZCOM-COMPTE-DATMAJ
+
+             CALL CA1 USING ZCOM
+             EVALUATE ZCOM-CODE-RETOUR
+               WHEN ZERO
+                 DISPLAY 'OPERATION EN BDD REUSSI'
+               WHEN OTHER
+                 SET FIELD-KO         TO TRUE
+                 EVALUATE WS-CFMVT-CODMVT
+                   WHEN 1
+                     SET MSGERR84 TO TRUE
+                     PERFORM WRITE-LOGERR
+                   WHEN 2
+                     SET MSGERR86 TO TRUE
+                     PERFORM WRITE-LOGERR
+                   WHEN 3
+                     SET MSGERR84 TO TRUE
+                     PERFORM WRITE-LOGERR
+                     SET MSGERR86 TO TRUE
+                     PERFORM WRITE-LOGERR
+                   WHEN 4
+                     SET MSGERR85 TO TRUE
+                     PERFORM WRITE-LOGERR
+                 END-EVALUATE
+             END-EVALUATE
+           END-IF
+           .
+      *==============================*
+      * MISE AU FORMAT SQL DES DATES *
+      *==============================*
+       FORMAT-CURRENTDATE.
+           MOVE FUNCTION CURRENT-DATE(7:2) TO WS-FORMAT-DAY
+           MOVE FUNCTION CURRENT-DATE(5:2) TO WS-FORMAT-MONTH
+           MOVE FUNCTION CURRENT-DATE(1:4) TO WS-FORMAT-YEAR
+           .
+      *================================================*
+      * DEBUT CONTROLE DES CHAMPS DU FICHIER MOUVEMENT *
+      *================================================*
+       FIELDS-CTRL.
+           SET FIELD-OK TO TRUE
+           PERFORM WRITE-LINE-NUMENR THRU WRITE-LINE-RECINFO
+           PERFORM FLD-CODMVT-CTRL THRU FLD-SOLDE-CTRL
+           .
+      *--------*
+       FLD-CODMVT-CTRL.
+           IF WS-CFMVT-CODMVT EQUAL SPACE
+             SET FIELD-KO TO TRUE
+             SET MSGERR01 TO TRUE
+             PERFORM WRITE-LOGERR
+           ELSE
+             IF WS-CFMVT-CODMVT NOT EQUAL '1' AND '2'
+                                        AND '3' AND '4'
+               SET FIELD-KO TO TRUE
+               SET MSGERR02 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           END-IF
+           .
+      *--------*
+       FLD-NUMCLI-CTRL.
+           IF WS-CFMVT-CODMVT EQUAL 1 OR 3
+             IF WS-CFMVT-NUMCLI NOT EQUAL SPACES AND
+                  WS-CFMVT-NUMCLI NOT EQUAL ZEROES
+               SET FIELD-KO TO TRUE
+               SET MSGERR21 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           END-IF
+           IF WS-CFMVT-CODMVT EQUAL 2 OR 4
+             EVALUATE TRUE
+               WHEN WS-CFMVT-NUMCLI EQUAL ZEROES OR
+                        WS-CFMVT-NUMCLI EQUAL SPACES
+                 SET FIELD-KO TO TRUE
+                 SET MSGERR03 TO TRUE
+                 PERFORM WRITE-LOGERR
+               WHEN WS-CFMVT-NUMCLI IS NOT NUMERIC
+                 SET FIELD-KO TO TRUE
+                 SET MSGERR04 TO TRUE
+                 PERFORM WRITE-LOGERR
+             END-EVALUATE
+           END-IF
+           .
+      *--------*
+       FLD-STATUT-CTRL.
+           IF WS-CFMVT-STATUT EQUAL SPACES
+             SET FIELD-KO TO TRUE
+             SET MSGERR07 TO TRUE
+             PERFORM WRITE-LOGERR
+           ELSE
+             IF WS-CFMVT-STATUT  NOT EQUAL 'P' AND 'E'
+               SET FIELD-KO TO TRUE
+               SET MSGERR08 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           END-IF
+           .
+      *--------*
+       FLD-NOM-CTRL.
+           IF WS-CFMVT-CODMVT EQUAL 1 OR 3 OR 4
+             IF WS-CFMVT-NOM EQUAL SPACE
+                SET FIELD-KO TO TRUE
+                SET MSGERR09 TO TRUE
+                PERFORM WRITE-LOGERR
+             ELSE
+                IF WS-CFMVT-NOM IS NUMERIC
+                  SET FIELD-KO   TO TRUE
+                  SET MSGERR09-1 TO TRUE
+                  PERFORM WRITE-LOGERR
+                END-IF
+             END-IF
+           END-IF
+           .
+      *--------*
+       FLD-PRENOM-CTRL.
+           IF WS-CFMVT-CODMVT EQUAL 1 OR 3 OR 4
+             IF WS-CFMVT-PRENOM EQUAL SPACE
+               SET FIELD-KO TO TRUE
+               SET MSGERR10 TO TRUE
+               PERFORM WRITE-LOGERR
+             ELSE
+               IF WS-CFMVT-PRENOM IS NUMERIC
+                 SET FIELD-KO   TO TRUE
+                 SET MSGERR10-1 TO TRUE
+                 PERFORM WRITE-LOGERR
+               END-IF
+             END-IF
+           END-IF
+           .
+      *--------*
+       FLD-DATENT-CTRL.
+           IF WS-CFMVT-CODMVT EQUAL 1 OR 3
+             IF WS-CFMVT-DATENT EQUAL SPACES
+               MOVE WS-FORMAT-CDATE TO WS-FORMAT-DATENT
+             ELSE
+               MOVE WS-CFMVT-DATENT TO ZDATE
+               CALL CTRLDAT  USING ZCOMDAT
+               EVALUATE ZDATE-CODRET
+                 WHEN ZERO
+                   MOVE ZDATE-FORMAT TO WS-FORMAT-DATENT
+                 WHEN 1
+                   SET FIELD-KO   TO TRUE
+                   SET MSGERR18-1 TO TRUE
+                   PERFORM WRITE-LOGERR
+                 WHEN OTHER
+                   SET FIELD-KO   TO TRUE
+                   SET MSGERR86   TO TRUE
+                   PERFORM WRITE-LOGERR
+               END-EVALUATE
+             END-IF
+           END-IF
+           IF WS-CFMVT-CODMVT EQUAL 2 OR 4
+             IF WS-CFMVT-DATENT NOT EQUAL SPACE
+               SET FIELD-KO TO TRUE
+               SET MSGERR12 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           END-IF
+           .
+      *--------*
+       FLD-NUMCPT-CTRL.
+      *    IF WS-CFMVT-NUMCPT NOT EQUAL ZEROES AND
+      *       WS-CFMVT-NUMCPT NOT EQUAL SPACES
+      *           SET FIELD-KO TO TRUE
+      *           SET MSGERR15 TO TRUE
+      *           PERFORM WRITE-LOGERR
+      *    END-IF
+
+           IF WS-CFMVT-CODMVT EQUAL 1 OR 4
+             IF WS-CFMVT-NUMCPT NOT EQUAL ZEROES AND
+                  WS-CFMVT-NUMCPT NOT EQUAL SPACES
+               SET FIELD-KO TO TRUE
+               SET MSGERR15 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           END-IF
+           IF WS-CFMVT-CODMVT EQUAL 2 OR 3
+             IF WS-CFMVT-NUMCPT IS NOT NUMERIC
+               SET FIELD-KO TO TRUE
+               SET MSGERR14 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           END-IF
+           .
+      *--------*
+       FLD-DATOUV-CTRL.
+           IF WS-CFMVT-DATOUV EQUAL SPACE
+             MOVE WS-FORMAT-CDATE TO WS-FORMAT-DATOUV
+           ELSE
+             MOVE WS-CFMVT-DATOUV TO ZDATE
+             CALL CTRLDAT USING ZCOMDAT
+             EVALUATE ZDATE-CODRET
+               WHEN ZERO
+                 MOVE ZDATE-FORMAT TO WS-FORMAT-DATOUV
+               WHEN 1
+                 SET FIELD-KO TO TRUE
+                 SET MSGERR18 TO TRUE
+                 PERFORM WRITE-LOGERR
+               WHEN OTHER
+                 SET FIELD-KO TO TRUE
+                 SET MSGERR86 TO TRUE
+                 PERFORM WRITE-LOGERR
+             END-EVALUATE
+           END-IF
+           .
+      *--------*
+       FLD-SOLDE-CTRL.
+           IF WS-CFMVT-CODMVT EQUAL 1 OR 4
+             IF WS-CFMVT-SOLDE-CTRL NOT EQUAL SPACES
+               DISPLAY 'NOT SPACE SOLDE'
+               SET FIELD-KO TO TRUE
+               SET MSGERR20 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           ELSE
+             IF WS-CFMVT-SOLDE-CTRL NOT NUMERIC
+               SET FIELD-KO TO TRUE
+               SET MSGERR19 TO TRUE
+               PERFORM WRITE-LOGERR
+             END-IF
+           END-IF
+           .
+      *==============================================*
+      * FIN CONTROLE DES CHAMPS DU FICHIER MOUVEMENT *
+      *==============================================*
+      *------------*
+      *==================================*
+      * DEBUT CONTROLE PRESENCE EN TABLE *
+      *==================================*
+       CHECK-IN-TABLE.
+           IF FIELD-OK
+             PERFORM CHECK-NUMCLI-TAB THRU CHECK-NUMCPT-TAB
+             PERFORM WRITE-LOGERR
+           END-IF
+           .
+      *--------*
+       CHECK-NUMCLI-TAB.
+           IF WS-CFMVT-CODMVT EQUAL 2 OR 4
+             MOVE '5' TO ZCOM-ACTION
+             MOVE WS-CFMVT-NUMCLI TO ZCOM-CLIENT-NUMCLI
+             CALL CA1 USING ZCOM
+             EVALUATE ZCOM-CODE-RETOUR
+               WHEN 1
+                 SET FIELD-KO TO TRUE
+                 SET MSGERR05 TO TRUE
+               WHEN 9
+                 SET FIELD-KO TO TRUE
+                 SET MSGERR81 TO TRUE
+             END-EVALUATE
+           END-IF
+           .
+      *--------*
+       CHECK-NUMCPT-TAB.
+           IF WS-CFMVT-CODMVT EQUAL 2 OR 3
+             MOVE '6' TO ZCOM-ACTION
+             MOVE WS-CFMVT-NUMCPT TO ZCOM-COMPTE-NUMCPT
+             CALL CA1 USING ZCOM
+             IF ZCOM-CODE-RETOUR EQUAL 0
+               SET FIELD-KO TO TRUE
+               SET MSGERR16 TO TRUE
+           END-IF
+           .
+      *================================*
+      * FIN CONTROLE PRESENCE EN TABLE *
+      *================================*
+      *--------*

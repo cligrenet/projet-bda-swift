@@ -1,0 +1,29 @@
+       01 ZCOM.
+          05 ZCOM-CODE.
+              10 ZCOM-ACTION              PIC X.
+              10 ZCOM-CODE-RETOUR         PIC 99.
+                 88 ZCOM-OK               VALUE ZEROES.
+                 88 ZCOM-NON-TROUVE       VALUE 1.
+                 88 ZCOM-EN-DOUBLE        VALUE 2.
+                 88 ZCOM-FIN-TABLE        VALUE 3.
+                 88 ZCOM-ERREUR           VALUE 9.
+              10 ZCOM-SQLCODE             PIC +(9)9.
+          05 ZCOM-LIGNE-CLIENT.
+               10 ZCOM-CLIENT-NUMCLI      PIC S9(9) USAGE COMP.
+               10 ZCOM-CLIENT-STATUT      PIC X.
+               10 ZCOM-CLIENT-NOM         PIC X(15).
+               10 ZCOM-CLIENT-PRENOM      PIC X(15).
+               10 ZCOM-CLIENT-VILLE       PIC X(15).
+               10 ZCOM-CLIENT-CDPOST      PIC X(5).
+               10 ZCOM-CLIENT-DATENT      PIC X(10).
+               10 ZCOM-CLIENT-DATMAJ      PIC X(10).
+          05 ZCOM-LIGNE-COMPTE.
+               10 ZCOM-COMPTE-NUMCPT      PIC S9(9) USAGE COMP.
+               10 ZCOM-COMPTE-STATUT      PIC X.
+               10 ZCOM-COMPTE-SOLDE       PIC S9(9)V9(2) USAGE COMP-3.
+               10 ZCOM-COMPTE-DATOUV      PIC X(10).
+               10 ZCOM-COMPTE-DATMAJ      PIC X(10).
+          05 ZCOM-LIGNE-CPTCLI.
+               10 ZCOM-CLIENT-NUMCLI2     PIC S9(9) USAGE COMP.
+               10 ZCOM-COMPTE-NUMCPT2     PIC S9(9) USAGE COMP.
+

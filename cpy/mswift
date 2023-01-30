@@ -1,0 +1,71 @@
+      ******************************************************************
+      * DCLGEN TABLE(ADS0103.ST_MSWIFT)                                *
+      *        LIBRARY(ADS01.ADS0103.CPY(MSWIFT))                      *
+      *        ACTION(REPLACE)                                         *
+      *        LANGUAGE(COBOL)                                         *
+      *        NAMES(WS-)                                              *
+      *        QUOTE                                                   *
+      *        DBCSDELIM(NO)                                           *
+      *        COLSUFFIX(YES)                                          *
+      *        INDVAR(YES)                                             *
+      * ... IS THE DCLGEN COMMAND THAT MADE THE FOLLOWING STATEMENTS   *
+      ******************************************************************
+           EXEC SQL DECLARE ADS0103.ST_MSWIFT TABLE
+           ( REFMSG                         INTEGER NOT NULL,
+             TYPMSG                         CHAR(1) NOT NULL,
+             DATVAL                         DATE NOT NULL,
+             CODDEV                         CHAR(3) NOT NULL,
+             MTTRAN                         DECIMAL(18, 9) NOT NULL,
+             NUMCLID                        INTEGER,
+             NOMCLID                        CHAR(20),
+             NUMCPTD                        INTEGER,
+             BICDEB                         CHAR(11) NOT NULL,
+             BICCOR                         CHAR(11) NOT NULL,
+             NUMCLIC                        INTEGER,
+             NOMCLIC                        CHAR(20),
+             NUMCPTC                        INTEGER,
+             BICCRD                         CHAR(11) NOT NULL,
+             DATCRE                         DATE NOT NULL
+           ) END-EXEC.
+      ******************************************************************
+      * COBOL DECLARATION FOR TABLE ADS0103.ST_MSWIFT                  *
+      ******************************************************************
+       01  DCLST-MSWIFT.
+      *                       REFMSG
+           10 WS-REFMSG            PIC S9(9) USAGE COMP.
+      *                       TYPMSG
+           10 WS-TYPMSG            PIC X(1).
+      *                       DATVAL
+           10 WS-DATVAL            PIC X(10).
+      *                       CODDEV
+           10 WS-CODDEV            PIC X(3).
+      *                       MTTRAN
+           10 WS-MTTRAN            PIC S9(9)V9(9) USAGE COMP-3.
+      *                       NUMCLID
+           10 WS-NUMCLID           PIC S9(9) USAGE COMP.
+      *                       NOMCLID
+           10 WS-NOMCLID           PIC X(20).
+      *                       NUMCPTD
+           10 WS-NUMCPTD           PIC S9(9) USAGE COMP.
+      *                       BICDEB
+           10 WS-BICDEB            PIC X(11).
+      *                       BICCOR
+           10 WS-BICCOR            PIC X(11).
+      *                       NUMCLIC
+           10 WS-NUMCLIC           PIC S9(9) USAGE COMP.
+      *                       NOMCLIC
+           10 WS-NOMCLIC           PIC X(20).
+      *                       NUMCPTC
+           10 WS-NUMCPTC           PIC S9(9) USAGE COMP.
+      *                       BICCRD
+           10 WS-BICCRD            PIC X(11).
+      *                       DATCRE
+           10 WS-DATCRE            PIC X(10).
+      ******************************************************************
+      * INDICATOR VARIABLE STRUCTURE                                   *
+      ******************************************************************
+       01  IST-MSWIFT.
+           10 INDSTRUC           PIC S9(4) USAGE COMP OCCURS 15 TIMES.
+      ******************************************************************
+      * THE NUMBER OF COLUMNS DESCRIBED BY THIS DECLARATION IS 15      *
+      ******************************************************************

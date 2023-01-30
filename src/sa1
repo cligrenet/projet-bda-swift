@@ -1,0 +1,283 @@
+       CBL MAP, LIST, SSRANGE
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. SA1.
+      ************************************************************
+      *     SOUS-PROG SA1 : CONTROLE BIC ET DEVISE               *
+      ************************************************************
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+           DECIMAL-POINT IS COMMA.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+      * UTILISER TOUTES LES HOST VARIABLES DANS DCLGEN
+           EXEC SQL INCLUDE SQLCA     END-EXEC.
+           EXEC SQL INCLUDE BIC       END-EXEC.
+           EXEC SQL INCLUDE DEVISE    END-EXEC.
+           EXEC SQL INCLUDE CLIENT    END-EXEC.
+           EXEC SQL INCLUDE COMPTE    END-EXEC.
+           EXEC SQL INCLUDE CPTCLI    END-EXEC.
+           EXEC SQL INCLUDE MSWIFT    END-EXEC.
+           EXEC SQL INCLUDE CHANGE    END-EXEC.
+
+       01 ZCALL-CODE.
+           05 ZCALL-ACTION             PIC X.
+           05 ZCALL-CODE-RETOUR        PIC 99.
+              88 ZCALL-OK                       VALUE ZEROES.
+              88 ZCALL-NON-TROUVE                VALUE 1.
+              88 ZCALL-EN-DOUBLE                 VALUE 2.
+              88 ZCALL-FIN-TABLE                 VALUE 3.
+              88 ZCALL-ERREUR                    VALUE 9.
+           05 ZCALL-SQLCODE            PIC +(9)9.
+
+      * INDICATEUR DE NULLITE
+       01 IND-INDCOR         PIC S9(4) COMP VALUE ZEROES.
+
+      * VARIABLE POUR LE STATUT DE COMPTE
+       01 WS-STATUT-COMPTE   PIC X VALUE 'O'.
+
+      * temp 
+       01 WS-CODDEV-TEMP     PIC X(3).
+       01 WS-INDCOR-TEMP     PIC X VALUE 'O'.
+       01 WS-BICCOR-TEMP     PIC X(11).
+
+      * VARIABLE POUR LE TAUX DE CHANGE
+       01 WS-DEV-EURO        PIC X(3)       VALUE 'EUR'.
+
+       LINKAGE SECTION.
+           EXEC SQL INCLUDE ZCOMS END-EXEC.
+
+       PROCEDURE DIVISION USING ZCOMS.
+           PERFORM DEBUT
+           PERFORM TRT
+           PERFORM FIN
+           .
+
+       DEBUT.
+      * RECUPERER LA ZONE DE COM EN WORKING/CLAUSE COPY QUI CONTIENT
+      * LES HOST VARIABLES
+      * INITIALISER DES ZONES, NETTOYAGE AVANT D'ALIMENTER
+           INITIALIZE ZCALL-CODE
+           INITIALIZE DCLST-BIC
+           INITIALIZE DCLST-DEVISE
+           INITIALIZE DCLST-MSWIFT
+           INITIALIZE DCLCT-CLIENT
+           INITIALIZE DCLCT-COMPTE
+           INITIALIZE DCLCT-CPTCLI
+
+      * ALIMENTER HV EN WORKING EN FAISANT DES MOVES DEPUIS ZCOM
+           MOVE ZCOM-CODE          TO ZCALL-CODE
+           MOVE ZCOM-LIGNE-BIC     TO DCLST-BIC
+           MOVE ZCOM-LIGNE-DEVISE  TO DCLST-DEVISE
+           MOVE ZCOM-LIGNE-MSWIFT  TO DCLST-MSWIFT
+           MOVE ZCOM-LIGNE-CLIENT  TO DCLCT-CLIENT
+           MOVE ZCOM-LIGNE-COMPTE  TO DCLCT-COMPTE
+           MOVE ZCOM-LIGNE-CPTCLI  TO DCLCT-CPTCLI
+           MOVE ZCOM-LIGNE-CHANGE  TO DCLST-CHANGE
+           .
+
+       TRT.
+           EVALUATE ZCALL-ACTION
+             WHEN '1'
+               PERFORM LEC-BIC
+             WHEN '2'
+               PERFORM LEC-DEVISE
+             WHEN '3'
+               PERFORM LEC-COMPTE
+             WHEN '4'
+               PERFORM LEC-COMPTE-STATUT
+             WHEN '5'
+               PERFORM FETCH-BICCOR
+             WHEN '6'
+               PERFORM LEC-INFOS-CLIENT
+             WHEN '7'
+               PERFORM GET-TX-CHANGE
+             WHEN OTHER
+               SET ZCALL-ERREUR   TO TRUE
+           END-EVALUATE
+           .
+
+       LEC-BIC.
+      * CONTROLE BIC EXISTE
+           EXEC SQL
+             SELECT BIC000,
+                    CODDEV,
+                    INDCOR
+             INTO   :WS-BIC000,
+                    :WS-CODDEV-BIC,
+                    :WS-INDCOR :IND-INDCOR
+             FROM ADS0103.ST_BIC
+             WHERE BIC000 = :WS-BIC000
+           END-EXEC
+
+           MOVE SQLCODE TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       LEC-DEVISE.
+           MOVE ZCOM-DEVISE-CODDEV TO WS-CODDEV
+      * CONTROLE DEVISE EXISTE
+           EXEC SQL
+             SELECT CODDEV,
+                    LIBDEV
+             INTO   :WS-CODDEV-DEV,
+                    :WS-LIBDEV
+             FROM ADS0103.ST_DEVISE
+             WHERE CODDEV = :WS-CODDEV
+           END-EXEC
+
+           MOVE SQLCODE TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       LEC-COMPTE.
+      * CONTROLE COMPTE EXISTE (PEU IMPORTANT SON STATUT)
+           EXEC SQL
+             SELECT NUMCPT,
+                    STATUT,
+                    SOLDE,
+                    DATOUV,
+                    DATMAJ
+             INTO   :WS-NUMCPT-CPT,
+                    :WS-STATUT-CPT,
+                    :WS-SOLDE,
+                    :WS-DATOUV-CPT,
+                    :WS-DATMAJ-CPT
+             FROM ADS0103.CT_COMPTE
+             WHERE NUMCPT = :WS-NUMCPTD
+           END-EXEC
+
+           MOVE SQLCODE TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+      *        PERFORM FIN-ERR
+           END-EVALUATE
+           .
+
+       LEC-COMPTE-STATUT.
+      * CONTROLE STATUT DU COMPTE EXISTANT = 'O'
+           EXEC SQL
+             SELECT NUMCPT,
+                    STATUT,
+                    SOLDE,
+                    DATOUV,
+                    DATMAJ
+             INTO   :WS-NUMCPT-CPT,
+                    :WS-STATUT-CPT,
+                    :WS-SOLDE,
+                    :WS-DATOUV-CPT,
+                    :WS-DATMAJ-CPT
+             FROM ADS0103.CT_COMPTE
+             WHERE NUMCPT = :WS-NUMCPTD
+               AND STATUT = :WS-STATUT-COMPTE
+           END-EXEC
+
+           MOVE SQLCODE TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+      *************************************************
+      * jointure de 3 tables: compte - cptcli - client 
+      *************************************************
+       LEC-INFOS-CLIENT.
+      * ZCOM-SWIFT-NUMCPTD A RECUPERER
+           EXEC SQL
+             SELECT CLIENT.NUMCLI,
+                    CLIENT.NOM000
+             INTO   :WS-NUMCLID,
+                    :WS-NOMCLID
+             FROM ADS0103.CT_CLIENT CLIENT
+             JOIN ADS0103.CT_CPTCLI CPTCLI
+               ON CPTCLI.NUMCLI = CLIENT.NUMCLI
+             JOIN ADS0103.CT_COMPTE COMPTE
+               ON COMPTE.NUMCPT = CPTCLI.NUMCPT
+             WHERE COMPTE.NUMCPT = :WS-NUMCPTD
+           END-EXEC
+
+           MOVE SQLCODE              TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK          TO TRUE
+               MOVE WS-NUMCLID       TO ZCOM-SWIFT-NUMCLID
+               MOVE WS-NOMCLID       TO ZCOM-SWIFT-NOMCLID
+             WHEN +100
+               SET ZCALL-NON-TROUVE  TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR      TO TRUE
+           END-EVALUATE
+           .
+
+       FETCH-BICCOR.
+      * VERIFIER LA BANQUE DE CORRESPONDANCE
+           EXEC SQL
+             SELECT BIC000
+             INTO :WS-BIC000
+             FROM ADS0103.ST_BIC
+             WHERE CODDEV = :WS-CODDEV-BIC
+               AND INDCOR = :WS-INDCOR
+           END-EXEC
+
+           MOVE SQLCODE               TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK           TO TRUE
+               MOVE WS-BIC000         TO ZCOM-BIC-BIC000
+             WHEN +100
+               SET ZCALL-NON-TROUVE   TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR       TO TRUE
+           END-EVALUATE
+           .
+       GET-TX-CHANGE.
+      * RECUPERER LE TAUX DE CHANGE
+           EXEC SQL
+             SELECT CHANGE
+             INTO :WS-CHANGE
+             FROM ADS0103.ST_CHANGE
+             WHERE CODDEV1 = :WS-DEV-EURO
+              AND  CODDEV2 = :WS-CODDEV2
+           END-EXEC
+
+           MOVE SQLCODE               TO ZCALL-SQLCODE
+           EVALUATE SQLCODE
+             WHEN ZEROES
+               SET ZCALL-OK           TO TRUE
+               MOVE WS-CHANGE         TO ZCOM-CHANGE-CHANGE
+             WHEN +100
+               SET ZCALL-NON-TROUVE   TO TRUE
+             WHEN OTHER
+               SET ZCALL-ERREUR       TO TRUE
+           END-EVALUATE
+           .
+       FIN.
+      * COPIER LA ZONE DE COM DE LA WORKING DANS LA LINKAGE
+           MOVE ZCALL-CODE   TO ZCOM-CODE
+
+           GOBACK.

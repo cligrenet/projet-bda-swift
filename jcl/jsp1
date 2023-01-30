@@ -1,0 +1,113 @@
+//ADS0103S JOB 'PROJET SP1',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),
+//         COND=(4,LT),TIME=(,30),NOTIFY=&SYSUID,RESTART=*
+//*
+//************************************************************
+//*
+//PLIB    JCLLIB ORDER=(DSN910.PROCLIB)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU PROGRAMME COBOL SP1
+//************************************************************
+//STEP1         EXEC IGYWCL,PARM='LIB',MBR=SP1
+//*
+//STEPLIB       DD  DSN=IGY410.SIGYCOMP,DISP=SHR
+//*
+//SYSLIB        DD  DSN=ADS01.ADS0103.CPY,DISP=SHR
+//SYSIN         DD  DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//LKED.SYSLMOD  DD  DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU PROGRAMME COBOL CTRLDAT
+//************************************************************
+//STEP2         EXEC IGYWCL,PARM='LIB',MBR=CTRLDAT
+//*
+//STEPLIB       DD  DSN=IGY410.SIGYCOMP,DISP=SHR
+//*
+//SYSLIB        DD  DSN=ADS01.ADS0103.CPY,DISP=SHR
+//SYSIN         DD  DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//LKED.SYSLMOD  DD  DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU SOUS-PROGRAMME COBOL SA1
+//************************************************************
+//STEP3        EXEC PROC=DSNHICOB,
+//             PARM.PLKED=('MAP','NOER'),
+//             MBR=SA1
+//PC.SYSLIB    DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//PC.SYSIN     DD DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//PC.DBRMLIB   DD DSN=ADS01.ADS0103.DBRM(&MBR),DISP=SHR
+//LKED.SYSLMOD DD DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU SOUS-PROGRAMME COBOL SSP2
+//************************************************************
+//STEP4        EXEC PROC=DSNHICOB,
+//             PARM.PLKED=('MAP','NOER'),
+//             MBR=SSP2
+//PC.SYSLIB    DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//PC.SYSIN     DD DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//PC.DBRMLIB   DD DSN=ADS01.ADS0103.DBRM(&MBR),DISP=SHR
+//LKED.SYSLMOD DD DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU SOUS-PROGRAMME COBOL SSP3
+//************************************************************
+//STEP5        EXEC PROC=DSNHICOB,
+//             PARM.PLKED=('MAP','NOER'),
+//             MBR=SSP3
+//PC.SYSLIB    DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//*            DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//PC.SYSIN     DD DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//PC.DBRMLIB   DD DSN=ADS01.ADS0103.DBRM(&MBR),DISP=SHR
+//*COB.SYSLIB   DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//*            DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//LKED.SYSLMOD DD DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* ETAPE DE COMPILATION DU SOUS-PROGRAMME COBOL CA2
+//************************************************************
+//STEP6        EXEC PROC=DSNHICOB,
+//             PARM.PLKED=('MAP','NOER'),
+//             MBR=CA2
+//PC.SYSLIB    DD DSN=ADS01.ADS0103.CPY,DISP=SHR
+//PC.SYSIN     DD DSN=ADS01.ADS0103.SRC(&MBR),DISP=SHR
+//PC.DBRMLIB   DD DSN=ADS01.ADS0103.DBRM(&MBR),DISP=SHR
+//LKED.SYSLMOD DD DSN=&&LOADTEMP(&MBR),DISP=(MOD,PASS)
+//*
+//************************************************************
+//* BIND DU PROGRAMME
+//************************************************************
+//STEP7     EXEC PGM=IKJEFT01,DYNAMNBR=20,COND=(8,LT)
+//STEPLIB   DD  DSN=DSN910.SDSNEXIT,DISP=SHR
+//          DD  DSN=DSN910.SDSNLOAD,DISP=SHR
+//DBRMLIB   DD  DSN=ADS01.ADS0103.DBRM,DISP=SHR
+//SYSPRINT  DD  SYSOUT=*
+//SYSTSPRT  DD  SYSOUT=*
+//SYSUDUMP  DD  SYSOUT=*
+//SYSTSIN   DD  *
+DSN SYSTEM(DB9G)
+BIND PLAN(SP1)    -
+     MEMBER(SA1,SSP2,SSP3,CA2)
+END
+/*
+//************************************************************
+//* EXECUTION PROG DB2
+//************************************************************
+//STEP8     EXEC PGM=IKJEFT01,DYNAMNBR=20,COND=(8,LT),
+//          REGION=4M
+//STEPLIB   DD  DSN=DSN910.SDSNEXIT,DISP=SHR
+//          DD  DSN=DSN910.SDSNLOAD,DISP=SHR
+//          DD  DSN=DSN910.RUNLIB.LOAD,DISP=SHR
+//          DD  DSN=&&LOADTEMP,DISP=(MOD,PASS)
+//DBRMLIB   DD  DSN=ADS01.ADS0103.DBRM,DISP=SHR
+//SYSPRINT  DD  SYSOUT=*
+//SYSTSPRT  DD  SYSOUT=*
+//SYSUDUMP  DD  SYSOUT=*
+//FSFMVT    DD DSN=ADS01.ADS0103.SFMVT,DISP=SHR
+//SYSTSIN   DD  *
+DSN SYSTEM(DB9G)
+  RUN PROGRAM(SP1)
+END
+/*
+//SYSOUT    DD SYSOUT=*
+//
