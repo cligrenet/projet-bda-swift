@@ -32,5 +32,15 @@ Cobol, JCL, SQL
 ## Participants
 Anssan, Chenjia, Bruno, Karim
 
+<a href="https://github.com/cligrenet/projet-bda-swift/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Anssan-SILIADIN/COBOL-DB2-PROJET-2" />
+  <img src="https://contrib.rocks/image?repo=cligrenet/projet-bda-swift" />
+  <img src="https://contrib.rocks/image?repo=Bruno-NECOCI/NbrPremier" />
+  <img src="https://contrib.rocks/image?repo=gamakaD/projet_07" />
+
+</a>
+Made with [contributors-img](https://contrib.rocks).
+
+
 ## Usage
 For more details, please read our documentation.
