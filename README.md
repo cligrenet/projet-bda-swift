@@ -1,4 +1,4 @@
-# Projet BDA Swfit
+# Projet BDA Swift
 
 ## About
 This is the final project of a 3-month COBOL coding camp.
